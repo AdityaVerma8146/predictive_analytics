@@ -177,10 +177,13 @@ app.post('/api/check-answer', (req, res) => {
 
 // 6. Submit Full Quiz (Exam Mode / Complete Evaluation)
 app.post('/api/submit-quiz', (req, res) => {
-  const { answers = {}, timeSpentSeconds = 0, mode = 'exam', sectionFilter = 'ALL' } = req.body;
+  const { answers = {}, timeSpentSeconds = 0, mode = 'exam', sectionFilter = 'ALL', questionIds } = req.body;
 
   let testQuestions = [...questions];
-  if (sectionFilter && sectionFilter !== 'ALL') {
+  if (Array.isArray(questionIds) && questionIds.length > 0) {
+    const idMap = new Map(questions.map(q => [q.id, q]));
+    testQuestions = questionIds.map(id => idMap.get(parseInt(id, 10))).filter(Boolean);
+  } else if (sectionFilter && sectionFilter !== 'ALL') {
     testQuestions = testQuestions.filter(q => q.sectionId.toUpperCase() === sectionFilter.toUpperCase());
   }
 

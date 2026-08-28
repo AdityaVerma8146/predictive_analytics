@@ -207,7 +207,7 @@ function renderSectionCards() {
 // 5. QUIZ MODE LAUNCHERS
 // ==========================================================================
 
-function startPracticeMode(sectionFilter = 'ALL', shuffle = false) {
+function startPracticeMode(sectionFilter = 'ALL', shuffle = false, count = null) {
   AppState.mode = 'practice';
   AppState.activeSectionFilter = sectionFilter;
   let list = [...AppState.allQuestions];
@@ -218,10 +218,15 @@ function startPracticeMode(sectionFilter = 'ALL', shuffle = false) {
   if (shuffle) {
     list = shuffleArray(list);
   }
+  if (count && !isNaN(count) && count > 0 && count < list.length) {
+    list = list.slice(0, count);
+  }
 
   AppState.activeQuestions = list;
   AppState.currentIndex = 0;
   AppState.userAnswers = {};
+  AppState.practiceEvaluations = {};
+  AppState.flaggedQuestions.clear();
   AppState.timeSpentSeconds = 0;
   AppState.isExamTimer = false;
   AppState.examSubmitted = false;
@@ -232,7 +237,7 @@ function startPracticeMode(sectionFilter = 'ALL', shuffle = false) {
   startTimer();
 }
 
-function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = 60, shuffle = true) {
+function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = null, shuffle = true) {
   AppState.mode = 'exam';
   AppState.activeSectionFilter = sectionFilter;
   let list = [...AppState.allQuestions];
@@ -243,9 +248,11 @@ function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = 60, sh
   if (shuffle) {
     list = shuffleArray(list);
   }
-  if (count && count < list.length) {
+  if (count && !isNaN(count) && count > 0 && count < list.length) {
     list = list.slice(0, count);
   }
+
+  const effectiveDuration = (durationMins && !isNaN(durationMins)) ? durationMins : Math.max(10, Math.round(list.length * 0.75));
 
   AppState.activeQuestions = list;
   AppState.currentIndex = 0;
@@ -253,7 +260,7 @@ function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = 60, sh
   AppState.practiceEvaluations = {};
   AppState.flaggedQuestions.clear();
   AppState.timeSpentSeconds = 0;
-  AppState.examTimeLimitSeconds = durationMins * 60;
+  AppState.examTimeLimitSeconds = effectiveDuration * 60;
   AppState.isExamTimer = true;
   AppState.examSubmitted = false;
 
@@ -559,6 +566,9 @@ function renderPalette() {
   const container = document.getElementById('palette-grid-container');
   if (!container) return;
 
+  const countBadge = document.getElementById('palette-total-count');
+  if (countBadge) countBadge.textContent = AppState.activeQuestions.length;
+
   const questions = AppState.activeQuestions;
   container.innerHTML = questions.map((q, idx) => {
     let statusClass = 'unvisited';
@@ -612,10 +622,17 @@ function jumpToQuestion(idx) {
 // ==========================================================================
 // 8. EXAM SUBMISSION & LOCAL SCORING ENGINE
 // ==========================================================================
-function calculateLocalQuizResults(answers, timeSpentSeconds, mode, sectionFilter) {
-  let testQuestions = [...AppState.allQuestions];
-  if (sectionFilter && sectionFilter !== 'ALL') {
-    testQuestions = testQuestions.filter(q => q.sectionId.toUpperCase() === sectionFilter.toUpperCase());
+function calculateLocalQuizResults(answers, timeSpentSeconds, mode, sectionFilter, questionIds = null) {
+  let testQuestions = [];
+  if (Array.isArray(questionIds) && questionIds.length > 0) {
+    const idMap = new Map(AppState.allQuestions.map(q => [q.id, q]));
+    testQuestions = questionIds.map(id => idMap.get(parseInt(id, 10))).filter(Boolean);
+  } else if (AppState.activeQuestions && AppState.activeQuestions.length > 0) {
+    testQuestions = [...AppState.activeQuestions];
+  } else if (sectionFilter && sectionFilter !== 'ALL') {
+    testQuestions = AppState.allQuestions.filter(q => q.sectionId.toUpperCase() === sectionFilter.toUpperCase());
+  } else {
+    testQuestions = [...AppState.allQuestions];
   }
 
   let correctCount = 0;
@@ -694,7 +711,7 @@ function calculateLocalQuizResults(answers, timeSpentSeconds, mode, sectionFilte
 
   const activeSections = Object.values(sectionStats).filter(s => s.total > 0).map(s => ({
     ...s,
-    percentage: Math.round((s.correct / s.total) * 100)
+    percentage: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0
   }));
 
   const recommendations = [];
@@ -732,13 +749,17 @@ async function submitFullQuiz() {
   stopTimer();
 
   let results = null;
+  const activeIds = (AppState.activeQuestions && AppState.activeQuestions.length > 0) 
+    ? AppState.activeQuestions.map(q => q.id) 
+    : Object.keys(AppState.userAnswers).map(Number);
 
   try {
     const payload = {
       answers: AppState.userAnswers,
       timeSpentSeconds: AppState.timeSpentSeconds,
       mode: AppState.mode,
-      sectionFilter: AppState.activeSectionFilter
+      sectionFilter: AppState.activeSectionFilter,
+      questionIds: activeIds
     };
 
     const res = await fetch('/api/submit-quiz', {
@@ -762,7 +783,8 @@ async function submitFullQuiz() {
       AppState.userAnswers,
       AppState.timeSpentSeconds,
       AppState.mode,
-      AppState.activeSectionFilter
+      AppState.activeSectionFilter,
+      activeIds
     );
   }
 
@@ -1480,7 +1502,14 @@ function setupEventListeners() {
 
   // Results Actions
   document.getElementById('btn-res-retry-mistakes')?.addEventListener('click', startMistakesDrill);
-  document.getElementById('btn-res-retake-all')?.addEventListener('click', () => startExamMode('ALL', 100, 60, true));
+  document.getElementById('btn-res-retake-all')?.addEventListener('click', () => {
+    const qCount = AppState.activeQuestions.length || 100;
+    if (AppState.mode === 'practice') {
+      startPracticeMode(AppState.activeSectionFilter, false, qCount);
+    } else {
+      startExamMode(AppState.activeSectionFilter, qCount, Math.max(10, Math.round(qCount * 0.75)), true);
+    }
+  });
   document.getElementById('btn-res-print')?.addEventListener('click', () => window.print());
 
   // Results Review Filter Tabs
@@ -1576,9 +1605,9 @@ function setupEventListeners() {
     if (modal) modal.style.display = 'none';
 
     if (mode === 'practice') {
-      startPracticeMode(section, shuffle);
+      startPracticeMode(section, shuffle, count);
     } else {
-      startExamMode(section, count, Math.max(15, count * 0.75), shuffle);
+      startExamMode(section, count, Math.max(10, Math.round(count * 0.75)), shuffle);
     }
   });
 
