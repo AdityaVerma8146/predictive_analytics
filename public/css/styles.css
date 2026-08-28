@@ -1944,10 +1944,14 @@ body::before {
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     z-index: 500;
     transform: translateY(105%);
-    transition: transform var(--transition-normal);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform var(--transition-normal), visibility var(--transition-normal);
   }
   .quiz-palette-sidebar.mobile-open {
     transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
   }
 }
 

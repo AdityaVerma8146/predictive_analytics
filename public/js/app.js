@@ -1,6 +1,6 @@
 /**
- * Predictive Analytics 100 MCQs Quiz Application - Core Engine
- * Manages State, Modes, Navigation, Real-Time Practice Feedback, Exam Evaluation, and Analytics.
+ * Predictive Analytics 100 MCQs Quiz Application - Core Client Engine
+ * Fully resilient for both full-stack (Node/Express) and static deployments (Vercel, Netlify, GitHub Pages).
  */
 
 // ==========================================================================
@@ -8,8 +8,8 @@
 // ==========================================================================
 const AppState = {
   // App Config & Data
-  allQuestions: [],
-  sections: [],
+  allQuestions: (window.PREDICTIVE_ANALYTICS_DATA && window.PREDICTIVE_ANALYTICS_DATA.questions) ? [...window.PREDICTIVE_ANALYTICS_DATA.questions] : [],
+  sections: (window.PREDICTIVE_ANALYTICS_DATA && window.PREDICTIVE_ANALYTICS_DATA.sections) ? [...window.PREDICTIVE_ANALYTICS_DATA.sections] : [],
   activeQuestions: [],
   currentIndex: 0,
   currentView: 'dashboard', // 'dashboard' | 'quiz' | 'results' | 'flashcards'
@@ -27,7 +27,7 @@ const AppState = {
   // Timers & Stats
   timerInterval: null,
   timeSpentSeconds: 0,
-  examTimeLimitSeconds: 3600, // 60 mins for 100 Qs default
+  examTimeLimitSeconds: 3600, // 60 mins default
   isExamTimer: false,
   examSubmitted: false,
   lastSubmissionResults: null,
@@ -38,48 +38,59 @@ const AppState = {
 };
 
 // ==========================================================================
-// 2. INITIALIZATION & DATA FETCHING
+// 2. INITIALIZATION & SETUP
 // ==========================================================================
-document.addEventListener('DOMContentLoaded', async () => {
+function initApp() {
   initTheme();
   initAudioControl();
   initKeyboardShortcuts();
   loadPersistedStorage();
 
-  // Fetch initial data from server
-  await fetchSections();
-  await fetchAllQuestions();
-
+  // Attach all event listeners immediately so clicks work instantly!
   setupEventListeners();
+
+  // Render initial dashboard immediately from local dataset
+  renderSectionCards();
   renderDashboard();
   updateMasteryBadge();
-});
 
-// Fetch sections from API
-async function fetchSections() {
-  try {
-    const res = await fetch('/api/sections');
-    const data = await res.json();
-    if (data.success) {
-      AppState.sections = data.sections;
-      renderSectionCards();
-    }
-  } catch (err) {
-    console.error('Error fetching sections:', err);
-  }
+  // Try background sync with API if server is present
+  syncDataFromServer();
 }
 
-// Fetch all questions from API
-async function fetchAllQuestions() {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
+
+// Background sync with API (optional enhancement)
+async function syncDataFromServer() {
   try {
-    const res = await fetch('/api/questions?includeAnswers=true');
-    const data = await res.json();
-    if (data.success) {
-      AppState.allQuestions = data.questions;
-      console.log(`Loaded ${data.questions.length} questions successfully.`);
+    const secRes = await fetch('/api/sections');
+    if (secRes.ok) {
+      const data = await secRes.json();
+      if (data.success && Array.isArray(data.sections) && data.sections.length > 0) {
+        AppState.sections = data.sections;
+        renderSectionCards();
+      }
     }
-  } catch (err) {
-    console.error('Error fetching questions:', err);
+  } catch (e) {
+    // Gracefully fallback to embedded dataset
+    console.log('Using local sections dataset');
+  }
+
+  try {
+    const qRes = await fetch('/api/questions?includeAnswers=true');
+    if (qRes.ok) {
+      const data = await qRes.json();
+      if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
+        AppState.allQuestions = data.questions;
+      }
+    }
+  } catch (e) {
+    // Gracefully fallback to embedded dataset
+    console.log('Using local questions dataset');
   }
 }
 
@@ -133,21 +144,21 @@ function showView(viewName) {
   const navStats = document.getElementById('nav-live-stats');
 
   if (viewName === 'dashboard') {
-    modePillText.textContent = 'Dashboard';
-    navStats.style.display = 'none';
+    if (modePillText) modePillText.textContent = 'Dashboard';
+    if (navStats) navStats.style.display = 'none';
     stopTimer();
     renderDashboard();
   } else if (viewName === 'quiz') {
-    modePillText.textContent = AppState.mode === 'practice' ? 'Practice Mode' : 'Exam Mode';
-    navStats.style.display = 'flex';
+    if (modePillText) modePillText.textContent = AppState.mode === 'practice' ? 'Practice Mode' : 'Exam Mode';
+    if (navStats) navStats.style.display = 'flex';
     updateNavLiveStats();
   } else if (viewName === 'results') {
-    modePillText.textContent = 'Diagnostic Scorecard';
-    navStats.style.display = 'none';
+    if (modePillText) modePillText.textContent = 'Diagnostic Scorecard';
+    if (navStats) navStats.style.display = 'none';
     stopTimer();
   } else if (viewName === 'flashcards') {
-    modePillText.textContent = 'Flashcard Recall';
-    navStats.style.display = 'none';
+    if (modePillText) modePillText.textContent = 'Flashcard Recall';
+    if (navStats) navStats.style.display = 'none';
     stopTimer();
   }
 }
@@ -157,14 +168,15 @@ function showView(viewName) {
 // ==========================================================================
 function renderDashboard() {
   const mistakesCount = AppState.mistakeQuestionIds.size;
-  document.getElementById('dash-mistakes-count').textContent = mistakesCount;
-  document.getElementById('badge-mistake-count').textContent = `${mistakesCount} Missed`;
+  const countEl = document.getElementById('dash-mistakes-count');
+  const badgeEl = document.getElementById('badge-mistake-count');
+  if (countEl) countEl.textContent = mistakesCount;
+  if (badgeEl) badgeEl.textContent = `${mistakesCount} Missed`;
   updateMasteryBadge();
 }
 
 function updateMasteryBadge() {
   const total = AppState.allQuestions.length || 100;
-  // Calculate accuracy from past answers
   const correctEvaluations = Object.values(AppState.practiceEvaluations).filter(e => e.isCorrect).length;
   const percent = Math.min(100, Math.round((correctEvaluations / total) * 100));
   const el = document.getElementById('dash-mastery-percent');
@@ -176,7 +188,7 @@ function renderSectionCards() {
   if (!container) return;
 
   container.innerHTML = AppState.sections.map(sec => `
-    <div class="section-card" onclick="startSectionPractice('${sec.id}')" role="button" tabindex="0">
+    <div class="section-card" data-section-id="${sec.id}" role="button" tabindex="0">
       <div class="sec-card-top">
         <div class="sec-letter-badge" style="background-color: ${sec.color}">${sec.id}</div>
         <span class="sec-count-badge">${sec.count} MCQs (${sec.range})</span>
@@ -195,7 +207,6 @@ function renderSectionCards() {
 // 5. QUIZ MODE LAUNCHERS
 // ==========================================================================
 
-// Launch Full 100 Practice Mode
 function startPracticeMode(sectionFilter = 'ALL', shuffle = false) {
   AppState.mode = 'practice';
   AppState.activeSectionFilter = sectionFilter;
@@ -221,7 +232,6 @@ function startPracticeMode(sectionFilter = 'ALL', shuffle = false) {
   startTimer();
 }
 
-// Launch Timed Mock Exam Mode
 function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = 60, shuffle = true) {
   AppState.mode = 'exam';
   AppState.activeSectionFilter = sectionFilter;
@@ -253,16 +263,14 @@ function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = 60, sh
   startTimer();
 }
 
-// Launch Section Practice
-window.startSectionPractice = function(sectionId) {
+function startSectionPractice(sectionId) {
   startPracticeMode(sectionId, false);
-};
+}
 
-// Launch Mistake Bank Drill
 function startMistakesDrill() {
   const mistakeIds = Array.from(AppState.mistakeQuestionIds);
   if (mistakeIds.length === 0) {
-    alert('🎉 Great job! You have zero mistakes recorded. Practice standard mode first to log attempts.');
+    alert('🎉 Great job! You have zero mistakes recorded. Complete some practice questions first.');
     return;
   }
 
@@ -283,7 +291,7 @@ function startMistakesDrill() {
 }
 
 // ==========================================================================
-// 6. QUESTION RENDERING & INTERACTION (Practice / Exam)
+// 6. QUESTION RENDERING & OPTION SELECTION
 // ==========================================================================
 function renderCurrentQuestion() {
   const questions = AppState.activeQuestions;
@@ -305,16 +313,22 @@ function renderCurrentQuestion() {
   // Progress Bar
   const currentNum = AppState.currentIndex + 1;
   const totalNum = questions.length;
-  document.getElementById('current-q-index').textContent = currentNum;
-  document.getElementById('total-q-count').textContent = totalNum;
+  const currEl = document.getElementById('current-q-index');
+  const totalEl = document.getElementById('total-q-count');
+  if (currEl) currEl.textContent = currentNum;
+  if (totalEl) totalEl.textContent = totalNum;
   
   const percent = Math.round((currentNum / totalNum) * 100);
-  document.getElementById('quiz-progress-percent').textContent = `${percent}%`;
-  document.getElementById('quiz-progress-bar').style.width = `${percent}%`;
+  const progText = document.getElementById('quiz-progress-percent');
+  const progBar = document.getElementById('quiz-progress-bar');
+  if (progText) progText.textContent = `${percent}%`;
+  if (progBar) progBar.style.width = `${percent}%`;
 
   // Question Meta
-  document.getElementById('q-id-pill').textContent = `Q${q.id}`;
-  document.getElementById('q-diff-pill').textContent = q.difficulty || 'Standard';
+  const qPill = document.getElementById('q-id-pill');
+  const diffPill = document.getElementById('q-diff-pill');
+  if (qPill) qPill.textContent = `Q${q.id}`;
+  if (diffPill) diffPill.textContent = q.difficulty || 'Standard';
   
   const tagsContainer = document.getElementById('q-tags-container');
   if (tagsContainer) {
@@ -322,7 +336,8 @@ function renderCurrentQuestion() {
   }
 
   // Question Text
-  document.getElementById('q-question-text').textContent = q.question;
+  const qText = document.getElementById('q-question-text');
+  if (qText) qText.textContent = q.question;
 
   // Bookmark & Flag buttons
   updateBookmarkButton(q.id);
@@ -362,33 +377,64 @@ function renderCurrentQuestion() {
   const expDrawer = document.getElementById('explanation-drawer');
   if (AppState.mode === 'practice' && evalData) {
     renderExplanationDrawer(evalData, userChoice);
-    expDrawer.style.display = 'block';
+    if (expDrawer) expDrawer.style.display = 'block';
   } else {
-    expDrawer.style.display = 'none';
+    if (expDrawer) expDrawer.style.display = 'none';
   }
 
   // Navigation Buttons
-  document.getElementById('btn-prev-question').disabled = AppState.currentIndex === 0;
+  const prevBtn = document.getElementById('btn-prev-question');
+  if (prevBtn) prevBtn.disabled = AppState.currentIndex === 0;
 
   const nextBtn = document.getElementById('btn-next-question');
   const submitBtn = document.getElementById('btn-submit-exam');
 
   if (AppState.currentIndex === questions.length - 1) {
     if (AppState.mode === 'exam') {
-      nextBtn.style.display = 'none';
-      submitBtn.style.display = 'inline-flex';
+      if (nextBtn) nextBtn.style.display = 'none';
+      if (submitBtn) submitBtn.style.display = 'inline-flex';
     } else {
-      nextBtn.innerHTML = 'Complete Practice <i class="fa-solid fa-flag-checkered"></i>';
-      submitBtn.style.display = 'none';
+      if (nextBtn) {
+        nextBtn.style.display = 'inline-flex';
+        nextBtn.innerHTML = 'Complete Practice <i class="fa-solid fa-flag-checkered"></i>';
+      }
+      if (submitBtn) submitBtn.style.display = 'none';
     }
   } else {
-    nextBtn.style.display = 'inline-flex';
-    nextBtn.innerHTML = 'Next <i class="fa-solid fa-chevron-right"></i>';
-    submitBtn.style.display = 'none';
+    if (nextBtn) {
+      nextBtn.style.display = 'inline-flex';
+      nextBtn.innerHTML = 'Next <i class="fa-solid fa-chevron-right"></i>';
+    }
+    if (submitBtn) submitBtn.style.display = 'none';
   }
 
   updatePaletteActiveCell();
   updateNavLiveStats();
+}
+
+// Local Evaluator Fallback (guarantees instant feedback offline & on static hosting)
+function evaluateAnswerLocally(question, selectedLetter) {
+  const cleanSelected = String(selectedLetter).toUpperCase().trim();
+  const isCorrect = cleanSelected === question.correctAnswer.toUpperCase();
+  const selectedDistractorExplanation = question.distractors ? question.distractors[cleanSelected] : null;
+
+  return {
+    success: true,
+    questionId: question.id,
+    selectedAnswer: cleanSelected,
+    isCorrect,
+    correctAnswer: question.correctAnswer,
+    correctOptionText: question.options[question.correctAnswer],
+    selectedOptionText: question.options[cleanSelected] || 'None',
+    explanation: question.explanation,
+    solution: question.solution || null,
+    distractors: question.distractors || {},
+    selectedDistractorExplanation: selectedDistractorExplanation || null,
+    keyTakeaway: question.keyTakeaway || null,
+    difficulty: question.difficulty,
+    tags: question.tags,
+    sectionTitle: question.sectionTitle
+  };
 }
 
 // Handle Option Selection
@@ -397,7 +443,9 @@ async function handleOptionSelect(selectedLetter) {
   const q = questions[AppState.currentIndex];
   if (!q) return;
 
-  if (window.soundEffects) window.soundEffects.playClick();
+  try {
+    if (window.soundEffects) window.soundEffects.playClick();
+  } catch (e) {}
 
   // EXAM MODE SELECTION
   if (AppState.mode === 'exam') {
@@ -407,40 +455,47 @@ async function handleOptionSelect(selectedLetter) {
     return;
   }
 
-  // PRACTICE MODE SELECTION (Instant Feedback & Deep Explanation)
+  // PRACTICE MODE SELECTION
   if (AppState.practiceEvaluations[q.id]) {
-    // Already answered in practice
-    return;
+    return; // Already answered
   }
 
   AppState.userAnswers[q.id] = selectedLetter;
 
+  let evalData = null;
+
+  // Try API first
   try {
-    // Validate answer with backend API
     const response = await fetch('/api/check-answer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionId: q.id, selectedAnswer: selectedLetter })
     });
-    const evalData = await response.json();
-
-    if (evalData.success) {
-      AppState.practiceEvaluations[q.id] = evalData;
-
-      if (evalData.isCorrect) {
-        if (window.soundEffects) window.soundEffects.playCorrect();
-        AppState.mistakeQuestionIds.delete(q.id);
-      } else {
-        if (window.soundEffects) window.soundEffects.playWrong();
-        AppState.mistakeQuestionIds.add(q.id);
-      }
-      persistStorage();
-      renderCurrentQuestion();
-      renderPalette();
+    if (response.ok) {
+      evalData = await response.json();
     }
   } catch (err) {
-    console.error('Check answer error:', err);
+    // Network or static deployment - will use local evaluator
   }
+
+  // If API not reachable, evaluate locally seamlessly
+  if (!evalData || !evalData.success) {
+    evalData = evaluateAnswerLocally(q, selectedLetter);
+  }
+
+  AppState.practiceEvaluations[q.id] = evalData;
+
+  if (evalData.isCorrect) {
+    try { if (window.soundEffects) window.soundEffects.playCorrect(); } catch (e) {}
+    AppState.mistakeQuestionIds.delete(q.id);
+  } else {
+    try { if (window.soundEffects) window.soundEffects.playWrong(); } catch (e) {}
+    AppState.mistakeQuestionIds.add(q.id);
+  }
+
+  persistStorage();
+  renderCurrentQuestion();
+  renderPalette();
 }
 
 // Render Instant Explanation Drawer
@@ -451,51 +506,49 @@ function renderExplanationDrawer(evalData, userChoice) {
   const icon = document.getElementById('exp-status-icon');
 
   if (evalData.isCorrect) {
-    header.className = 'exp-header correct';
-    title.textContent = '🎉 Correct Answer!';
-    subtitle.textContent = `You selected (${evalData.correctAnswer}): "${evalData.correctOptionText}"`;
-    icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+    if (header) header.className = 'exp-header correct';
+    if (title) title.textContent = '🎉 Correct Answer!';
+    if (subtitle) subtitle.textContent = `You selected (${evalData.correctAnswer}): "${evalData.correctOptionText}"`;
+    if (icon) icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
   } else {
-    header.className = 'exp-header wrong';
-    title.textContent = '❌ Incorrect Attempt';
-    subtitle.textContent = `You selected (${userChoice}): "${evalData.selectedOptionText}" • Correct Answer is (${evalData.correctAnswer}): "${evalData.correctOptionText}"`;
-    icon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+    if (header) header.className = 'exp-header wrong';
+    if (title) title.textContent = '❌ Incorrect Attempt';
+    if (subtitle) subtitle.textContent = `You selected (${userChoice}): "${evalData.selectedOptionText}" • Correct Answer is (${evalData.correctAnswer}): "${evalData.correctOptionText}"`;
+    if (icon) icon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
   }
 
-  // Distractor Analysis (Explaining why user's choice was wrong)
+  // Distractor Analysis (Why user selection was wrong)
   const distractorBox = document.getElementById('distractor-box');
   const distractorText = document.getElementById('distractor-text');
-  if (!evalData.isCorrect && evalData.selectedDistractorExplanation) {
-    distractorText.textContent = evalData.selectedDistractorExplanation;
-    distractorBox.style.display = 'block';
-  } else if (!evalData.isCorrect && evalData.distractors && evalData.distractors[userChoice]) {
-    distractorText.textContent = evalData.distractors[userChoice];
-    distractorBox.style.display = 'block';
+  if (!evalData.isCorrect && (evalData.selectedDistractorExplanation || (evalData.distractors && evalData.distractors[userChoice]))) {
+    if (distractorText) distractorText.textContent = evalData.selectedDistractorExplanation || evalData.distractors[userChoice];
+    if (distractorBox) distractorBox.style.display = 'block';
   } else {
-    distractorBox.style.display = 'none';
+    if (distractorBox) distractorBox.style.display = 'none';
   }
 
-  // Mathematical Solution (If formula calculation question)
+  // Mathematical Solution
   const solutionBox = document.getElementById('solution-box');
   const solutionText = document.getElementById('solution-text');
   if (evalData.solution) {
-    solutionText.textContent = evalData.solution;
-    solutionBox.style.display = 'block';
+    if (solutionText) solutionText.textContent = evalData.solution;
+    if (solutionBox) solutionBox.style.display = 'block';
   } else {
-    solutionBox.style.display = 'none';
+    if (solutionBox) solutionBox.style.display = 'none';
   }
 
   // Conceptual Explanation
-  document.getElementById('concept-explanation-text').textContent = evalData.explanation;
+  const conceptText = document.getElementById('concept-explanation-text');
+  if (conceptText) conceptText.textContent = evalData.explanation;
 
   // Key Takeaway / Memory Formula
   const takeawayBox = document.getElementById('takeaway-box');
   const takeawayText = document.getElementById('takeaway-text');
   if (evalData.keyTakeaway) {
-    takeawayText.textContent = evalData.keyTakeaway;
-    takeawayBox.style.display = 'flex';
+    if (takeawayText) takeawayText.textContent = evalData.keyTakeaway;
+    if (takeawayBox) takeawayBox.style.display = 'flex';
   } else {
-    takeawayBox.style.display = 'none';
+    if (takeawayBox) takeawayBox.style.display = 'none';
   }
 }
 
@@ -531,7 +584,7 @@ function renderPalette() {
     const currentClass = isCurrent ? 'current' : '';
 
     return `
-      <button class="palette-cell ${statusClass} ${currentClass}" onclick="jumpToQuestion(${idx})" title="Q${q.id}">
+      <button class="palette-cell ${statusClass} ${currentClass}" data-q-index="${idx}" title="Q${q.id}">
         ${idx + 1}
       </button>
     `;
@@ -549,18 +602,136 @@ function updatePaletteActiveCell() {
   });
 }
 
-window.jumpToQuestion = function(idx) {
+function jumpToQuestion(idx) {
   if (idx >= 0 && idx < AppState.activeQuestions.length) {
     AppState.currentIndex = idx;
     renderCurrentQuestion();
   }
-};
+}
 
 // ==========================================================================
-// 8. EXAM SUBMISSION & RESULTS EVALUATION
+// 8. EXAM SUBMISSION & LOCAL SCORING ENGINE
 // ==========================================================================
+function calculateLocalQuizResults(answers, timeSpentSeconds, mode, sectionFilter) {
+  let testQuestions = [...AppState.allQuestions];
+  if (sectionFilter && sectionFilter !== 'ALL') {
+    testQuestions = testQuestions.filter(q => q.sectionId.toUpperCase() === sectionFilter.toUpperCase());
+  }
+
+  let correctCount = 0;
+  let incorrectCount = 0;
+  let unansweredCount = 0;
+  const reviewList = [];
+  const sectionStats = {};
+
+  AppState.sections.forEach(sec => {
+    sectionStats[sec.id] = {
+      id: sec.id,
+      title: sec.title,
+      total: 0,
+      correct: 0,
+      incorrect: 0,
+      unanswered: 0,
+      color: sec.color
+    };
+  });
+
+  testQuestions.forEach(q => {
+    const userSelected = answers[q.id] ? String(answers[q.id]).toUpperCase() : null;
+    const isAnswered = !!userSelected;
+    const isCorrect = isAnswered && userSelected === q.correctAnswer;
+
+    if (sectionStats[q.sectionId]) {
+      sectionStats[q.sectionId].total += 1;
+      if (isCorrect) sectionStats[q.sectionId].correct += 1;
+      else if (isAnswered) sectionStats[q.sectionId].incorrect += 1;
+      else sectionStats[q.sectionId].unanswered += 1;
+    }
+
+    if (!isAnswered) {
+      unansweredCount += 1;
+    } else if (isCorrect) {
+      correctCount += 1;
+    } else {
+      incorrectCount += 1;
+    }
+
+    reviewList.push({
+      id: q.id,
+      sectionId: q.sectionId,
+      sectionTitle: q.sectionTitle,
+      question: q.question,
+      options: q.options,
+      userSelected: userSelected || null,
+      correctAnswer: q.correctAnswer,
+      isCorrect,
+      isAnswered,
+      explanation: q.explanation,
+      solution: q.solution || null,
+      distractors: q.distractors || {},
+      keyTakeaway: q.keyTakeaway || null,
+      difficulty: q.difficulty,
+      tags: q.tags
+    });
+  });
+
+  const totalQuestions = testQuestions.length;
+  const scorePercentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100 * 10) / 10 : 0;
+
+  let grade = 'F';
+  let badgeColor = '#ef4444';
+  if (scorePercentage >= 90) { grade = 'A+ (Outstanding)'; badgeColor = '#10b981'; }
+  else if (scorePercentage >= 80) { grade = 'A (Excellent)'; badgeColor = '#10b981'; }
+  else if (scorePercentage >= 70) { grade = 'B (Good)'; badgeColor = '#3b82f6'; }
+  else if (scorePercentage >= 60) { grade = 'C (Fair)'; badgeColor = '#f59e0b'; }
+  else if (scorePercentage >= 50) { grade = 'D (Pass)'; badgeColor = '#f97316'; }
+  else { grade = 'F (Needs Revision)'; badgeColor = '#ef4444'; }
+
+  const mins = Math.floor(timeSpentSeconds / 60);
+  const secs = timeSpentSeconds % 60;
+  const timeFormatted = `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+  const avgTimePerQuestion = totalQuestions > 0 ? (timeSpentSeconds / totalQuestions).toFixed(1) + 's' : '0s';
+
+  const activeSections = Object.values(sectionStats).filter(s => s.total > 0).map(s => ({
+    ...s,
+    percentage: Math.round((s.correct / s.total) * 100)
+  }));
+
+  const recommendations = [];
+  activeSections.forEach(s => {
+    if (s.percentage < 70) {
+      recommendations.push({
+        sectionId: s.id,
+        title: s.title,
+        percentage: s.percentage,
+        advice: `Focus revision on ${s.title}. Review formulas, definitions, and key distractor traps in this unit.`
+      });
+    }
+  });
+
+  return {
+    totalQuestions,
+    answeredCount: correctCount + incorrectCount,
+    correctCount,
+    incorrectCount,
+    unansweredCount,
+    scorePercentage,
+    grade,
+    badgeColor,
+    timeSpentSeconds,
+    timeFormatted,
+    avgTimePerQuestion,
+    sectionBreakdown: activeSections,
+    recommendations,
+    reviewList,
+    submittedAt: new Date().toISOString()
+  };
+}
+
 async function submitFullQuiz() {
   stopTimer();
+
+  let results = null;
 
   try {
     const payload = {
@@ -576,39 +747,54 @@ async function submitFullQuiz() {
       body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
-    if (data.success) {
-      AppState.lastSubmissionResults = data.results;
-      
-      // Update mistake bank from submitted exam
-      data.results.reviewList.forEach(item => {
-        if (!item.isCorrect && item.isAnswered) {
-          AppState.mistakeQuestionIds.add(item.id);
-        } else if (item.isCorrect) {
-          AppState.mistakeQuestionIds.delete(item.id);
-        }
-      });
-      persistStorage();
-
-      renderResultsView(data.results);
-      showView('results');
-
-      // Trigger victory fanfare & confetti for high scores
-      if (data.results.scorePercentage >= 75) {
-        if (window.soundEffects) window.soundEffects.playFanfare();
-        triggerConfetti();
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        results = data.results;
       }
     }
   } catch (err) {
-    console.error('Quiz submission error:', err);
+    // Network or static deployment - evaluate locally
+  }
+
+  if (!results) {
+    results = calculateLocalQuizResults(
+      AppState.userAnswers,
+      AppState.timeSpentSeconds,
+      AppState.mode,
+      AppState.activeSectionFilter
+    );
+  }
+
+  AppState.lastSubmissionResults = results;
+  
+  // Update mistake bank
+  results.reviewList.forEach(item => {
+    if (!item.isCorrect && item.isAnswered) {
+      AppState.mistakeQuestionIds.add(item.id);
+    } else if (item.isCorrect) {
+      AppState.mistakeQuestionIds.delete(item.id);
+    }
+  });
+  persistStorage();
+
+  renderResultsView(results);
+  showView('results');
+
+  // Trigger fanfare and celebration for scores >= 75%
+  if (results.scorePercentage >= 75) {
+    try { if (window.soundEffects) window.soundEffects.playFanfare(); } catch (e) {}
+    triggerConfetti();
   }
 }
 
 function renderResultsView(results) {
   // Score circle
   const scorePercent = results.scorePercentage;
-  document.getElementById('res-score-percent').textContent = `${scorePercent}%`;
-  document.getElementById('res-score-fraction').textContent = `${results.correctCount} / ${results.totalQuestions}`;
+  const scoreEl = document.getElementById('res-score-percent');
+  const fracEl = document.getElementById('res-score-fraction');
+  if (scoreEl) scoreEl.textContent = `${scorePercent}%`;
+  if (fracEl) fracEl.textContent = `${results.correctCount} / ${results.totalQuestions}`;
 
   const circleBar = document.getElementById('results-circle-bar');
   if (circleBar) {
@@ -622,16 +808,24 @@ function renderResultsView(results) {
 
   // Grade pill
   const gradePill = document.getElementById('res-grade-pill');
-  gradePill.textContent = `Grade: ${results.grade}`;
-  gradePill.style.color = results.badgeColor;
-  gradePill.style.borderColor = results.badgeColor;
+  if (gradePill) {
+    gradePill.textContent = `Grade: ${results.grade}`;
+    gradePill.style.color = results.badgeColor;
+    gradePill.style.borderColor = results.badgeColor;
+  }
 
   // Stats Grid
-  document.getElementById('res-correct-count').textContent = results.correctCount;
-  document.getElementById('res-incorrect-count').textContent = results.incorrectCount;
-  document.getElementById('res-time-spent').textContent = results.timeFormatted;
-  document.getElementById('res-avg-speed').textContent = results.avgTimePerQuestion;
-  document.getElementById('res-missed-num').textContent = results.incorrectCount;
+  const cEl = document.getElementById('res-correct-count');
+  const iEl = document.getElementById('res-incorrect-count');
+  const tEl = document.getElementById('res-time-spent');
+  const sEl = document.getElementById('res-avg-speed');
+  const mEl = document.getElementById('res-missed-num');
+
+  if (cEl) cEl.textContent = results.correctCount;
+  if (iEl) iEl.textContent = results.incorrectCount;
+  if (tEl) tEl.textContent = results.timeFormatted;
+  if (sEl) sEl.textContent = results.avgTimePerQuestion;
+  if (mEl) mEl.textContent = results.incorrectCount;
 
   // Section Breakdown Bars
   const secContainer = document.getElementById('res-sections-list');
@@ -653,18 +847,20 @@ function renderResultsView(results) {
   const recsContainer = document.getElementById('res-recs-container');
   const recsList = document.getElementById('res-recs-list');
   if (results.recommendations && results.recommendations.length > 0) {
-    recsContainer.style.display = 'block';
-    recsList.innerHTML = results.recommendations.map(r => `
-      <div class="rec-card">
-        <i class="fa-solid fa-lightbulb"></i>
-        <div>
-          <strong>${r.title} (${r.percentage}%)</strong>
-          <p>${r.advice}</p>
+    if (recsContainer) recsContainer.style.display = 'block';
+    if (recsList) {
+      recsList.innerHTML = results.recommendations.map(r => `
+        <div class="rec-card">
+          <i class="fa-solid fa-lightbulb"></i>
+          <div>
+            <strong>${r.title} (${r.percentage}%)</strong>
+            <p>${r.advice}</p>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('');
+    }
   } else {
-    recsContainer.style.display = 'none';
+    if (recsContainer) recsContainer.style.display = 'none';
   }
 
   // Render Full Review List
@@ -673,10 +869,15 @@ function renderResultsView(results) {
 }
 
 function updateReviewCounts(reviewList) {
-  document.getElementById('rev-count-all').textContent = reviewList.length;
-  document.getElementById('rev-count-wrong').textContent = reviewList.filter(q => !q.isCorrect).length;
-  document.getElementById('rev-count-correct').textContent = reviewList.filter(q => q.isCorrect).length;
-  document.getElementById('rev-count-bookmarks').textContent = reviewList.filter(q => AppState.bookmarkedQuestions.has(q.id)).length;
+  const allEl = document.getElementById('rev-count-all');
+  const wrongEl = document.getElementById('rev-count-wrong');
+  const corrEl = document.getElementById('rev-count-correct');
+  const bmEl = document.getElementById('rev-count-bookmarks');
+
+  if (allEl) allEl.textContent = reviewList.length;
+  if (wrongEl) wrongEl.textContent = reviewList.filter(q => !q.isCorrect).length;
+  if (corrEl) corrEl.textContent = reviewList.filter(q => q.isCorrect).length;
+  if (bmEl) bmEl.textContent = reviewList.filter(q => AppState.bookmarkedQuestions.has(q.id)).length;
 }
 
 function renderReviewQuestionsList(reviewList, filter = 'ALL') {
@@ -721,7 +922,7 @@ function renderReviewQuestionsList(reviewList, filter = 'ALL') {
         <h4 class="rc-question">${q.question}</h4>
         <div class="rc-options">${optionsHtml}</div>
 
-        <button class="rc-details-toggle" onclick="toggleReviewDeepDive('rc-dd-${q.id}')">
+        <button class="rc-details-toggle" data-toggle-id="rc-dd-${q.id}">
           <i class="fa-solid fa-chevron-down"></i> View Detailed Solution & Concept Explanation
         </button>
 
@@ -748,16 +949,16 @@ function renderReviewQuestionsList(reviewList, filter = 'ALL') {
   }).join('');
 }
 
-window.toggleReviewDeepDive = function(id) {
+function toggleReviewDeepDive(id) {
   const el = document.getElementById(id);
   if (el) {
     el.style.display = el.style.display === 'none' ? 'flex' : 'none';
   }
-};
+}
 
-// ==========================================
+// ==========================================================================
 // 9. FLASHCARD ENGINE (3D Flip)
-// ==========================================
+// ==========================================================================
 function startFlashcardsMode(sectionFilter = 'ALL') {
   AppState.mode = 'flashcards';
   let list = [...AppState.allQuestions];
@@ -783,48 +984,59 @@ function renderFlashcard() {
   if (!q) return;
 
   // Counters
-  document.getElementById('fc-current-idx').textContent = AppState.fcIndex + 1;
-  document.getElementById('fc-total-count').textContent = questions.length;
-  document.getElementById('fc-num-front').textContent = q.id;
-  document.getElementById('fc-num-back').textContent = q.id;
+  const cEl = document.getElementById('fc-current-idx');
+  const tEl = document.getElementById('fc-total-count');
+  const nfEl = document.getElementById('fc-num-front');
+  const nbEl = document.getElementById('fc-num-back');
+
+  if (cEl) cEl.textContent = AppState.fcIndex + 1;
+  if (tEl) tEl.textContent = questions.length;
+  if (nfEl) nfEl.textContent = q.id;
+  if (nbEl) nbEl.textContent = q.id;
 
   // Front
-  document.getElementById('fc-badge-front').textContent = q.sectionTitle || `Section ${q.sectionId}`;
-  document.getElementById('fc-question-text').textContent = q.question;
-  
+  const bFront = document.getElementById('fc-badge-front');
+  const qFront = document.getElementById('fc-question-text');
   const optPreview = document.getElementById('fc-options-preview');
+
+  if (bFront) bFront.textContent = q.sectionTitle || `Section ${q.sectionId}`;
+  if (qFront) qFront.textContent = q.question;
   if (optPreview) {
     optPreview.innerHTML = ['A', 'B', 'C', 'D'].map(l => `<div><strong>${l}:</strong> ${q.options[l]}</div>`).join('');
   }
 
   // Back
-  document.getElementById('fc-correct-letter').textContent = q.correctAnswer;
-  document.getElementById('fc-correct-text').textContent = q.options[q.correctAnswer];
+  const corrLetter = document.getElementById('fc-correct-letter');
+  const corrText = document.getElementById('fc-correct-text');
+  if (corrLetter) corrLetter.textContent = q.correctAnswer;
+  if (corrText) corrText.textContent = q.options[q.correctAnswer];
   
   const mathBox = document.getElementById('fc-math-box');
   const mathText = document.getElementById('fc-math-text');
   if (q.solution) {
-    mathText.textContent = q.solution;
-    mathBox.style.display = 'block';
+    if (mathText) mathText.textContent = q.solution;
+    if (mathBox) mathBox.style.display = 'block';
   } else {
-    mathBox.style.display = 'none';
+    if (mathBox) mathBox.style.display = 'none';
   }
 
-  document.getElementById('fc-explanation-text').textContent = q.explanation;
-  document.getElementById('fc-takeaway-text').textContent = q.keyTakeaway || 'Master this fundamental pattern.';
+  const expText = document.getElementById('fc-explanation-text');
+  const takeText = document.getElementById('fc-takeaway-text');
+  if (expText) expText.textContent = q.explanation;
+  if (takeText) takeText.textContent = q.keyTakeaway || 'Master this fundamental concept.';
 }
 
 function flipActiveFlashcard() {
   const card = document.getElementById('active-flashcard');
   if (card) {
     card.classList.toggle('flipped');
-    if (window.soundEffects) window.soundEffects.playClick();
+    try { if (window.soundEffects) window.soundEffects.playClick(); } catch (e) {}
   }
 }
 
-// ==========================================
+// ==========================================================================
 // 10. SEARCH ENGINE
-// ==========================================
+// ==========================================================================
 function searchQuestions(query) {
   const listContainer = document.getElementById('search-results-list');
   if (!listContainer) return;
@@ -849,7 +1061,7 @@ function searchQuestions(query) {
   }
 
   listContainer.innerHTML = results.map(item => `
-    <div class="search-result-item" onclick="openQuestionFromSearch(${item.id})">
+    <div class="search-result-item" data-q-id="${item.id}" role="button" tabindex="0">
       <div class="s-res-top">
         <span>Q${item.id} • ${item.sectionTitle}</span>
         <span>${item.difficulty || 'Standard'}</span>
@@ -859,8 +1071,9 @@ function searchQuestions(query) {
   `).join('');
 }
 
-window.openQuestionFromSearch = function(questionId) {
-  document.getElementById('modal-search').style.display = 'none';
+function openQuestionFromSearch(questionId) {
+  const searchModal = document.getElementById('modal-search');
+  if (searchModal) searchModal.style.display = 'none';
   const targetIdx = AppState.allQuestions.findIndex(q => q.id === questionId);
   if (targetIdx !== -1) {
     AppState.mode = 'practice';
@@ -870,11 +1083,11 @@ window.openQuestionFromSearch = function(questionId) {
     renderCurrentQuestion();
     renderPalette();
   }
-};
+}
 
-// ==========================================
+// ==========================================================================
 // 11. TIMERS & UTILITIES
-// ==========================================
+// ==========================================================================
 function startTimer() {
   stopTimer();
   AppState.timerInterval = setInterval(() => {
@@ -962,9 +1175,9 @@ function triggerConfetti() {
   }
 }
 
-// ==========================================
+// ==========================================================================
 // 12. THEME & AUDIO INITIALIZERS
-// ==========================================
+// ==========================================================================
 function initTheme() {
   const saved = localStorage.getItem('pa_quiz_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
@@ -1003,12 +1216,11 @@ function toggleAudio() {
   }
 }
 
-// ==========================================
+// ==========================================================================
 // 13. KEYBOARD SHORTCUTS
-// ==========================================
+// ==========================================================================
 function initKeyboardShortcuts() {
   window.addEventListener('keydown', (e) => {
-    // If inside textarea or search input, ignore navigation shortcuts
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
       if (e.key === 'Escape') {
         document.querySelectorAll('.modal-backdrop').forEach(m => m.style.display = 'none');
@@ -1016,15 +1228,15 @@ function initKeyboardShortcuts() {
       return;
     }
 
-    // Global Search trigger
     if (e.key === '/') {
       e.preventDefault();
-      document.getElementById('modal-search').style.display = 'flex';
-      document.getElementById('global-search-input').focus();
+      const modal = document.getElementById('modal-search');
+      const input = document.getElementById('global-search-input');
+      if (modal) modal.style.display = 'flex';
+      if (input) input.focus();
       return;
     }
 
-    // Quiz View Shortcuts
     if (AppState.currentView === 'quiz') {
       if (['1', 'a', 'A'].includes(e.key)) handleOptionSelect('A');
       if (['2', 'b', 'B'].includes(e.key)) handleOptionSelect('B');
@@ -1044,7 +1256,6 @@ function initKeyboardShortcuts() {
       }
     }
 
-    // Flashcard View Shortcuts
     if (AppState.currentView === 'flashcards') {
       if (e.key === ' ' || e.key === 'Spacebar') {
         e.preventDefault();
@@ -1064,9 +1275,9 @@ function initKeyboardShortcuts() {
   });
 }
 
-// ==========================================
-// 14. EVENT LISTENERS SETUP
-// ==========================================
+// ==========================================================================
+// 14. EVENT LISTENERS & BULLETPROOF EVENT DELEGATION
+// ==========================================================================
 function setupEventListeners() {
   // Navigation Bar
   document.getElementById('btn-brand')?.addEventListener('click', () => showView('dashboard'));
@@ -1074,8 +1285,10 @@ function setupEventListeners() {
   document.getElementById('btn-theme-toggle')?.addEventListener('click', toggleTheme);
   document.getElementById('btn-sound-toggle')?.addEventListener('click', toggleAudio);
   document.getElementById('btn-search-toggle')?.addEventListener('click', () => {
-    document.getElementById('modal-search').style.display = 'flex';
-    document.getElementById('global-search-input').focus();
+    const modal = document.getElementById('modal-search');
+    const input = document.getElementById('global-search-input');
+    if (modal) modal.style.display = 'flex';
+    if (input) input.focus();
   });
 
   // Dashboard Mode Cards
@@ -1084,15 +1297,71 @@ function setupEventListeners() {
   document.getElementById('card-mode-flashcards')?.addEventListener('click', () => startFlashcardsMode('ALL'));
   document.getElementById('card-mode-mistakes')?.addEventListener('click', startMistakesDrill);
   document.getElementById('btn-open-custom-builder')?.addEventListener('click', () => {
-    document.getElementById('modal-custom-builder').style.display = 'flex';
+    const m = document.getElementById('modal-custom-builder');
+    if (m) m.style.display = 'flex';
   });
 
-  // Quiz Option Buttons
-  ['A', 'B', 'C', 'D'].forEach(letter => {
-    document.getElementById(`opt-btn-${letter}`)?.addEventListener('click', () => handleOptionSelect(letter));
-  });
+  // Event Delegation for Section Cards in Dashboard
+  const secContainer = document.getElementById('dashboard-sections-container');
+  if (secContainer) {
+    secContainer.addEventListener('click', (e) => {
+      const card = e.target.closest('.section-card');
+      if (card) {
+        const secId = card.getAttribute('data-section-id');
+        if (secId) startSectionPractice(secId);
+      }
+    });
+  }
 
-  // Quiz Navigation
+  // Event Delegation for Options Container in Quiz View
+  const optionsContainer = document.getElementById('options-container');
+  if (optionsContainer) {
+    optionsContainer.addEventListener('click', (e) => {
+      const optCard = e.target.closest('.option-card');
+      if (optCard) {
+        const optLetter = optCard.getAttribute('data-option');
+        if (optLetter) handleOptionSelect(optLetter);
+      }
+    });
+  }
+
+  // Event Delegation for Question Palette Grid
+  const paletteContainer = document.getElementById('palette-grid-container');
+  if (paletteContainer) {
+    paletteContainer.addEventListener('click', (e) => {
+      const cell = e.target.closest('.palette-cell');
+      if (cell) {
+        const idx = parseInt(cell.getAttribute('data-q-index'), 10);
+        if (!isNaN(idx)) jumpToQuestion(idx);
+      }
+    });
+  }
+
+  // Event Delegation for Search Results
+  const searchResultsContainer = document.getElementById('search-results-list');
+  if (searchResultsContainer) {
+    searchResultsContainer.addEventListener('click', (e) => {
+      const item = e.target.closest('.search-result-item');
+      if (item) {
+        const qId = parseInt(item.getAttribute('data-q-id'), 10);
+        if (!isNaN(qId)) openQuestionFromSearch(qId);
+      }
+    });
+  }
+
+  // Event Delegation for Results Review Deep Dives
+  const reviewContainer = document.getElementById('res-review-container');
+  if (reviewContainer) {
+    reviewContainer.addEventListener('click', (e) => {
+      const toggleBtn = e.target.closest('.rc-details-toggle');
+      if (toggleBtn) {
+        const targetId = toggleBtn.getAttribute('data-toggle-id');
+        if (targetId) toggleReviewDeepDive(targetId);
+      }
+    });
+  }
+
+  // Quiz Navigation Buttons
   document.getElementById('btn-prev-question')?.addEventListener('click', () => {
     if (AppState.currentIndex > 0) {
       AppState.currentIndex--;
@@ -1141,25 +1410,31 @@ function setupEventListeners() {
   document.getElementById('btn-quiz-notes')?.addEventListener('click', () => {
     const q = AppState.activeQuestions[AppState.currentIndex];
     if (!q) return;
-    document.getElementById('note-q-preview').textContent = `Q${q.id}: ${q.question}`;
-    document.getElementById('note-textarea').value = AppState.notes[q.id] || '';
-    document.getElementById('modal-note').style.display = 'flex';
+    const preview = document.getElementById('note-q-preview');
+    const textarea = document.getElementById('note-textarea');
+    const modal = document.getElementById('modal-note');
+    if (preview) preview.textContent = `Q${q.id}: ${q.question}`;
+    if (textarea) textarea.value = AppState.notes[q.id] || '';
+    if (modal) modal.style.display = 'flex';
   });
 
   document.getElementById('btn-save-note')?.addEventListener('click', () => {
     const q = AppState.activeQuestions[AppState.currentIndex];
     if (!q) return;
-    const note = document.getElementById('note-textarea').value;
-    AppState.notes[q.id] = note;
+    const textarea = document.getElementById('note-textarea');
+    const modal = document.getElementById('modal-note');
+    if (textarea) AppState.notes[q.id] = textarea.value;
     persistStorage();
-    document.getElementById('modal-note').style.display = 'none';
+    if (modal) modal.style.display = 'none';
   });
 
   document.getElementById('btn-cancel-note')?.addEventListener('click', () => {
-    document.getElementById('modal-note').style.display = 'none';
+    const modal = document.getElementById('modal-note');
+    if (modal) modal.style.display = 'none';
   });
   document.getElementById('btn-close-note')?.addEventListener('click', () => {
-    document.getElementById('modal-note').style.display = 'none';
+    const modal = document.getElementById('modal-note');
+    if (modal) modal.style.display = 'none';
   });
 
   // Question Palette Sidebar Toggle
@@ -1173,26 +1448,33 @@ function setupEventListeners() {
 
   // Exam Submit Trigger
   document.getElementById('btn-submit-exam')?.addEventListener('click', () => {
-    // Show summary confirm modal
     const total = AppState.activeQuestions.length;
     const answered = Object.keys(AppState.userAnswers).length;
     const unanswered = total - answered;
     const flagged = AppState.flaggedQuestions.size;
 
-    document.getElementById('conf-answered-count').textContent = answered;
-    document.getElementById('conf-unanswered-count').textContent = unanswered;
-    document.getElementById('conf-flagged-count').textContent = flagged;
-    document.getElementById('modal-submit-confirm').style.display = 'flex';
+    const ansEl = document.getElementById('conf-answered-count');
+    const unansEl = document.getElementById('conf-unanswered-count');
+    const flagEl = document.getElementById('conf-flagged-count');
+    const modal = document.getElementById('modal-submit-confirm');
+
+    if (ansEl) ansEl.textContent = answered;
+    if (unansEl) unansEl.textContent = unanswered;
+    if (flagEl) flagEl.textContent = flagged;
+    if (modal) modal.style.display = 'flex';
   });
 
   document.getElementById('btn-cancel-submit')?.addEventListener('click', () => {
-    document.getElementById('modal-submit-confirm').style.display = 'none';
+    const modal = document.getElementById('modal-submit-confirm');
+    if (modal) modal.style.display = 'none';
   });
   document.getElementById('btn-close-confirm')?.addEventListener('click', () => {
-    document.getElementById('modal-submit-confirm').style.display = 'none';
+    const modal = document.getElementById('modal-submit-confirm');
+    if (modal) modal.style.display = 'none';
   });
   document.getElementById('btn-confirm-final-submit')?.addEventListener('click', () => {
-    document.getElementById('modal-submit-confirm').style.display = 'none';
+    const modal = document.getElementById('modal-submit-confirm');
+    if (modal) modal.style.display = 'none';
     submitFullQuiz();
   });
 
@@ -1204,9 +1486,11 @@ function setupEventListeners() {
   // Results Review Filter Tabs
   document.querySelectorAll('.filter-tab').forEach(tab => {
     tab.addEventListener('click', (e) => {
+      const btn = e.target.closest('.filter-tab');
+      if (!btn) return;
       document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-      e.target.classList.add('active');
-      const filter = e.target.getAttribute('data-filter');
+      btn.classList.add('active');
+      const filter = btn.getAttribute('data-filter') || 'ALL';
       if (AppState.lastSubmissionResults) {
         renderReviewQuestionsList(AppState.lastSubmissionResults.reviewList, filter);
       }
@@ -1265,23 +1549,31 @@ function setupEventListeners() {
     searchQuestions(e.target.value);
   });
   document.getElementById('btn-close-search')?.addEventListener('click', () => {
-    document.getElementById('modal-search').style.display = 'none';
+    const modal = document.getElementById('modal-search');
+    if (modal) modal.style.display = 'none';
   });
 
   // Custom Quiz Builder
   document.getElementById('btn-cancel-builder')?.addEventListener('click', () => {
-    document.getElementById('modal-custom-builder').style.display = 'none';
+    const modal = document.getElementById('modal-custom-builder');
+    if (modal) modal.style.display = 'none';
   });
   document.getElementById('btn-close-builder')?.addEventListener('click', () => {
-    document.getElementById('modal-custom-builder').style.display = 'none';
+    const modal = document.getElementById('modal-custom-builder');
+    if (modal) modal.style.display = 'none';
   });
   document.getElementById('btn-start-custom-quiz')?.addEventListener('click', () => {
-    const section = document.getElementById('builder-section-select').value;
-    const count = parseInt(document.querySelector('input[name="builder-count"]:checked')?.value || '25', 10);
-    const mode = document.querySelector('input[name="builder-mode"]:checked')?.value || 'practice';
-    const shuffle = document.getElementById('builder-shuffle')?.checked || false;
+    const secSelect = document.getElementById('builder-section-select');
+    const section = secSelect ? secSelect.value : 'ALL';
+    const countRadio = document.querySelector('input[name="builder-count"]:checked');
+    const count = countRadio ? parseInt(countRadio.value, 10) : 25;
+    const modeRadio = document.querySelector('input[name="builder-mode"]:checked');
+    const mode = modeRadio ? modeRadio.value : 'practice';
+    const shuffleBox = document.getElementById('builder-shuffle');
+    const shuffle = shuffleBox ? shuffleBox.checked : false;
 
-    document.getElementById('modal-custom-builder').style.display = 'none';
+    const modal = document.getElementById('modal-custom-builder');
+    if (modal) modal.style.display = 'none';
 
     if (mode === 'practice') {
       startPracticeMode(section, shuffle);
@@ -1289,4 +1581,32 @@ function setupEventListeners() {
       startExamMode(section, count, Math.max(15, count * 0.75), shuffle);
     }
   });
+
+  // Close modals when clicking backdrop outside container
+  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) {
+        backdrop.style.display = 'none';
+      }
+    });
+  });
 }
+
+// ==========================================================================
+// 15. ATTACH GLOBAL EXPORTS TO WINDOW
+// ==========================================================================
+window.AppState = AppState;
+window.showView = showView;
+window.startPracticeMode = startPracticeMode;
+window.startExamMode = startExamMode;
+window.startFlashcardsMode = startFlashcardsMode;
+window.startMistakesDrill = startMistakesDrill;
+window.startSectionPractice = startSectionPractice;
+window.handleOptionSelect = handleOptionSelect;
+window.jumpToQuestion = jumpToQuestion;
+window.openQuestionFromSearch = openQuestionFromSearch;
+window.toggleReviewDeepDive = toggleReviewDeepDive;
+window.flipActiveFlashcard = flipActiveFlashcard;
+window.submitFullQuiz = submitFullQuiz;
+window.toggleTheme = toggleTheme;
+window.toggleAudio = toggleAudio;
