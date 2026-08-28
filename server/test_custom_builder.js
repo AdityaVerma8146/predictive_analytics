@@ -41,8 +41,8 @@ async function runCustomBuilderTests() {
   console.log('1. Submitting 10 custom questions with 10 correct answers...');
   const custom10Ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const custom10Answers = {
-    1: 'B', 2: 'A', 3: 'C', 4: 'A', 5: 'B',
-    6: 'D', 7: 'B', 8: 'B', 9: 'B', 10: 'B'
+    1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'A',
+    6: 'B', 7: 'C', 8: 'D', 9: 'A', 10: 'B'
   };
 
   const res10 = await makeRequest(
@@ -75,17 +75,14 @@ async function runCustomBuilderTests() {
   console.log('\n2. Submitting 25 custom questions with 20 correct and 5 wrong...');
   const custom25Ids = Array.from({ length: 25 }, (_, i) => i + 1);
   const custom25Answers = {};
+  const letters = ['D', 'A', 'B', 'C'];
   custom25Ids.forEach(id => {
+    const correctAns = letters[id % 4];
     if (id <= 20) {
-      // Correct
-      const q = [
-        null, 'B','A','C','A','B','D','B','B','B','B',
-        'A','B','A','D','A','A','A','B','A','B'
-      ][id];
-      custom25Answers[id] = q;
+      custom25Answers[id] = correctAns;
     } else {
       // Intentionally wrong
-      custom25Answers[id] = 'C';
+      custom25Answers[id] = correctAns === 'A' ? 'B' : 'A';
     }
   });
 

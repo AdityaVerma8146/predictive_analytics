@@ -76,13 +76,13 @@ async function runTests() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       },
-      { questionId: 27, selectedAnswer: 'A' }
+      { questionId: 27, selectedAnswer: 'D' }
     );
     assert(wrongAttempt.status === 200, 'Check answer endpoint returned HTTP 200');
     assert(wrongAttempt.data.isCorrect === false, 'Identified attempt as incorrect');
     assert(wrongAttempt.data.correctAnswer === 'C', 'Correct answer is identified as C (60)');
     assert(wrongAttempt.data.solution && wrongAttempt.data.solution.includes('Upper Fence = Q3 + 1.5'), 'Includes step-by-step IQR calculation');
-    assert(wrongAttempt.data.selectedDistractorExplanation.includes('40 is simply Q3 + 10'), 'Explains why choice A (40) was wrong');
+    assert(wrongAttempt.data.selectedDistractorExplanation.includes('40 is simply Q3 + 10'), 'Explains why choice D (40) was wrong');
 
     // 5. Correct Answer Check (Practice Mode)
     console.log('\n5. Testing /api/check-answer on correct selection (Q93 - MSE Calculation)...');
@@ -94,7 +94,7 @@ async function runTests() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       },
-      { questionId: 93, selectedAnswer: 'B' }
+      { questionId: 93, selectedAnswer: 'A' }
     );
     assert(correctAttempt.data.isCorrect === true, 'Identified attempt as correct');
     assert(correctAttempt.data.solution && correctAttempt.data.solution.includes('MSE = (4 + 4) / 2 = 8 / 2 = 4'), 'Includes full MSE calculation workout');
@@ -112,10 +112,10 @@ async function runTests() {
       },
       {
         answers: {
-          1: 'B', 2: 'A', 3: 'C', 4: 'A', 5: 'B', 6: 'D', 7: 'B', 8: 'B', 9: 'B', 10: 'B',
-          11: 'A', 12: 'B', 13: 'A', 14: 'D', 15: 'A', // Section A: 15/15 = 100%
-          16: 'A', 17: 'A', 18: 'B', 19: 'A', 20: 'B', 21: 'A', 22: 'D', 23: 'A', 24: 'A', 25: 'B',
-          26: 'B', 27: 'A', 28: 'B', 29: 'D', 30: 'A'  // Section B: 14/15 (Q27 wrong)
+          1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'A', 6: 'B', 7: 'C', 8: 'D', 9: 'A', 10: 'B',
+          11: 'C', 12: 'D', 13: 'A', 14: 'B', 15: 'C', // Section A: 15/15 = 100%
+          16: 'D', 17: 'A', 18: 'B', 19: 'C', 20: 'D', 21: 'A', 22: 'B', 23: 'C', 24: 'D', 25: 'A',
+          26: 'B', 27: 'D', 28: 'D', 29: 'A', 30: 'B'  // Section B: 14/15 (Q27 wrong choice D)
         },
         timeSpentSeconds: 450,
         mode: 'exam'

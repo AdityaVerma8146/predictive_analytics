@@ -204,6 +204,55 @@ function renderSectionCards() {
 }
 
 // ==========================================================================
+// 4.5. OPTION & QUESTION RANDOMIZER (A, B, C, D Dynamic Shuffling)
+// ==========================================================================
+function shuffleQuestionOptions(q) {
+  if (!q || !q.options) return q;
+  const letters = ['A', 'B', 'C', 'D'];
+  const items = letters.map(letter => ({
+    origLetter: letter,
+    text: q.options[letter],
+    isCorrect: letter === q.correctAnswer,
+    distractor: q.distractors ? q.distractors[letter] : null
+  }));
+
+  // Fisher-Yates shuffle options among A, B, C, and D
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+
+  const newOptions = {};
+  const newDistractors = {};
+  let newCorrectAnswer = q.correctAnswer;
+
+  items.forEach((item, idx) => {
+    const newLetter = letters[idx];
+    newOptions[newLetter] = item.text;
+    if (item.isCorrect) {
+      newCorrectAnswer = newLetter;
+    } else if (item.distractor) {
+      newDistractors[newLetter] = item.distractor;
+    }
+  });
+
+  return {
+    ...q,
+    options: newOptions,
+    correctAnswer: newCorrectAnswer,
+    distractors: newDistractors
+  };
+}
+
+function prepareQuestionBatch(questions, shuffleOptions = true, shuffleQuestions = false) {
+  let list = questions.map(q => shuffleOptions ? shuffleQuestionOptions(q) : { ...q });
+  if (shuffleQuestions) {
+    list = shuffleArray(list);
+  }
+  return list;
+}
+
+// ==========================================================================
 // 5. QUIZ MODE LAUNCHERS
 // ==========================================================================
 
@@ -215,9 +264,10 @@ function startPracticeMode(sectionFilter = 'ALL', shuffle = false, count = null)
   if (sectionFilter !== 'ALL') {
     list = list.filter(q => q.sectionId.toUpperCase() === sectionFilter.toUpperCase());
   }
-  if (shuffle) {
-    list = shuffleArray(list);
-  }
+  
+  // Dynamically shuffle options among A, B, C, D on every run!
+  list = prepareQuestionBatch(list, true, shuffle);
+
   if (count && !isNaN(count) && count > 0 && count < list.length) {
     list = list.slice(0, count);
   }
@@ -245,9 +295,10 @@ function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = null, 
   if (sectionFilter !== 'ALL') {
     list = list.filter(q => q.sectionId.toUpperCase() === sectionFilter.toUpperCase());
   }
-  if (shuffle) {
-    list = shuffleArray(list);
-  }
+
+  // Dynamically shuffle options among A, B, C, D on every run!
+  list = prepareQuestionBatch(list, true, shuffle);
+
   if (count && !isNaN(count) && count > 0 && count < list.length) {
     list = list.slice(0, count);
   }
@@ -281,12 +332,15 @@ function startMistakesDrill() {
     return;
   }
 
-  const list = AppState.allQuestions.filter(q => mistakeIds.includes(q.id));
+  let list = AppState.allQuestions.filter(q => mistakeIds.includes(q.id));
+  list = prepareQuestionBatch(list, true, true);
+
   AppState.mode = 'practice';
   AppState.activeSectionFilter = 'ALL';
   AppState.activeQuestions = list;
   AppState.currentIndex = 0;
   AppState.userAnswers = {};
+  AppState.practiceEvaluations = {};
   AppState.timeSpentSeconds = 0;
   AppState.isExamTimer = false;
   AppState.examSubmitted = false;
@@ -469,27 +523,8 @@ async function handleOptionSelect(selectedLetter) {
 
   AppState.userAnswers[q.id] = selectedLetter;
 
-  let evalData = null;
-
-  // Try API first
-  try {
-    const response = await fetch('/api/check-answer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId: q.id, selectedAnswer: selectedLetter })
-    });
-    if (response.ok) {
-      evalData = await response.json();
-    }
-  } catch (err) {
-    // Network or static deployment - will use local evaluator
-  }
-
-  // If API not reachable, evaluate locally seamlessly
-  if (!evalData || !evalData.success) {
-    evalData = evaluateAnswerLocally(q, selectedLetter);
-  }
-
+  // Evaluate directly on active shuffled question
+  const evalData = evaluateAnswerLocally(q, selectedLetter);
   AppState.practiceEvaluations[q.id] = evalData;
 
   if (evalData.isCorrect) {
@@ -988,7 +1023,7 @@ function startFlashcardsMode(sectionFilter = 'ALL') {
     list = list.filter(q => q.sectionId.toUpperCase() === sectionFilter.toUpperCase());
   }
 
-  AppState.fcQuestions = list;
+  AppState.fcQuestions = prepareQuestionBatch(list, true, false);
   AppState.fcIndex = 0;
 
   showView('flashcards');
@@ -1530,7 +1565,7 @@ function setupEventListeners() {
   document.getElementById('active-flashcard')?.addEventListener('click', flipActiveFlashcard);
   document.getElementById('btn-fc-back')?.addEventListener('click', () => showView('dashboard'));
   document.getElementById('btn-fc-shuffle')?.addEventListener('click', () => {
-    AppState.fcQuestions = shuffleArray(AppState.fcQuestions);
+    AppState.fcQuestions = prepareQuestionBatch(AppState.fcQuestions, true, true);
     AppState.fcIndex = 0;
     renderFlashcard();
   });
