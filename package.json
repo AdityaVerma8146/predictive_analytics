@@ -1,0 +1,26 @@
+{
+  "name": "predictive-analytics-quiz-app",
+  "version": "1.0.0",
+  "description": "Full-fledged Unit-1 Predictive Analytics 100 MCQs Quiz Application with interactive explanations, exam mode, and analytics.",
+  "main": "server/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "test": "node server/test_api.js"
+  },
+  "keywords": [
+    "predictive-analytics",
+    "quiz-app",
+    "machine-learning",
+    "mcq",
+    "data-science"
+  ],
+  "author": "Antigravity",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "morgan": "^1.10.0"
+  }
+}
