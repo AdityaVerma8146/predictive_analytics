@@ -659,11 +659,11 @@ function jumpToQuestion(idx) {
 // ==========================================================================
 function calculateLocalQuizResults(answers, timeSpentSeconds, mode, sectionFilter, questionIds = null) {
   let testQuestions = [];
-  if (Array.isArray(questionIds) && questionIds.length > 0) {
+  if (AppState.activeQuestions && AppState.activeQuestions.length > 0) {
+    testQuestions = [...AppState.activeQuestions];
+  } else if (Array.isArray(questionIds) && questionIds.length > 0) {
     const idMap = new Map(AppState.allQuestions.map(q => [q.id, q]));
     testQuestions = questionIds.map(id => idMap.get(parseInt(id, 10))).filter(Boolean);
-  } else if (AppState.activeQuestions && AppState.activeQuestions.length > 0) {
-    testQuestions = [...AppState.activeQuestions];
   } else if (sectionFilter && sectionFilter !== 'ALL') {
     testQuestions = AppState.allQuestions.filter(q => q.sectionId.toUpperCase() === sectionFilter.toUpperCase());
   } else {
@@ -794,7 +794,8 @@ async function submitFullQuiz() {
       timeSpentSeconds: AppState.timeSpentSeconds,
       mode: AppState.mode,
       sectionFilter: AppState.activeSectionFilter,
-      questionIds: activeIds
+      questionIds: activeIds,
+      clientQuestions: AppState.activeQuestions
     };
 
     const res = await fetch('/api/submit-quiz', {
