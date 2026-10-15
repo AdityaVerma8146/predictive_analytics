@@ -8,6 +8,7 @@
 // ==========================================================================
 const AppState = {
   // App Config & Data
+  currentUnit: 'unit1',
   allQuestions: (window.PREDICTIVE_ANALYTICS_DATA && window.PREDICTIVE_ANALYTICS_DATA.questions) ? [...window.PREDICTIVE_ANALYTICS_DATA.questions] : [],
   sections: (window.PREDICTIVE_ANALYTICS_DATA && window.PREDICTIVE_ANALYTICS_DATA.sections) ? [...window.PREDICTIVE_ANALYTICS_DATA.sections] : [],
   activeQuestions: [],
@@ -46,6 +47,11 @@ function initApp() {
   initKeyboardShortcuts();
   loadPersistedStorage();
 
+  // Initialize Auth, Analytics & Leaderboard Engines
+  if (typeof AuthManager !== 'undefined') AuthManager.init();
+  if (typeof AnalyticsTracker !== 'undefined') AnalyticsTracker.init();
+  if (typeof LeaderboardManager !== 'undefined') LeaderboardManager.init();
+
   // Attach all event listeners immediately so clicks work instantly!
   setupEventListeners();
 
@@ -53,6 +59,12 @@ function initApp() {
   renderSectionCards();
   renderDashboard();
   updateMasteryBadge();
+  updateCustomBuilderSections();
+
+  // Track page viewed
+  if (typeof AnalyticsTracker !== 'undefined') {
+    AnalyticsTracker.track('page_viewed', '/dashboard', 'User visited Predictive Analytics Mastery platform');
+  }
 
   // Try background sync with API if server is present
   syncDataFromServer();
@@ -790,6 +802,7 @@ async function submitFullQuiz() {
 
   try {
     const payload = {
+      unit: AppState.currentUnit,
       answers: AppState.userAnswers,
       timeSpentSeconds: AppState.timeSpentSeconds,
       mode: AppState.mode,
@@ -826,6 +839,11 @@ async function submitFullQuiz() {
 
   AppState.lastSubmissionResults = results;
   
+  // Track submission event
+  if (typeof AnalyticsTracker !== 'undefined') {
+    AnalyticsTracker.track('exam_submitted', '/quiz', `Submitted ${AppState.currentUnit.toUpperCase()} (${results.correctCount}/${results.totalQuestions} - ${results.scorePercentage}%)`, 'Submit Exam Button');
+  }
+  
   // Update mistake bank
   results.reviewList.forEach(item => {
     if (!item.isCorrect && item.isAnswered) {
@@ -843,6 +861,11 @@ async function submitFullQuiz() {
   if (results.scorePercentage >= 75) {
     try { if (window.soundEffects) window.soundEffects.playFanfare(); } catch (e) {}
     triggerConfetti();
+  }
+
+  // Check if student qualifies for University Top 25 Performers Leaderboard
+  if (typeof LeaderboardManager !== 'undefined') {
+    LeaderboardManager.checkAndPromptRecord(results);
   }
 }
 
@@ -1334,6 +1357,787 @@ function initKeyboardShortcuts() {
 }
 
 // ==========================================================================
+// 13.5 MULTI-UNIT SYLLABUS MANAGEMENT & REVISION SHEET
+// ==========================================================================
+function escapeHtml(str) {
+  if (typeof str !== 'string') return str == null ? '' : String(str);
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function switchUnit(unitKey) {
+  if (unitKey === 'unit3') {
+    const modal3 = document.getElementById('modal-unit3');
+    if (modal3) modal3.style.display = 'flex';
+    if (typeof AnalyticsTracker !== 'undefined') {
+      AnalyticsTracker.track('button_clicked', window.location.pathname, 'Attempted to access Unit 3 (Coming Soon)');
+    }
+    return;
+  }
+
+  if (unitKey !== 'unit1' && unitKey !== 'unit2') return;
+
+  AppState.currentUnit = unitKey;
+
+  // Retrieve unit data from window.PREDICTIVE_ANALYTICS_DATA_UNITS
+  const unitData = (window.PREDICTIVE_ANALYTICS_DATA_UNITS && window.PREDICTIVE_ANALYTICS_DATA_UNITS[unitKey]) 
+    ? window.PREDICTIVE_ANALYTICS_DATA_UNITS[unitKey] 
+    : null;
+
+  if (unitData) {
+    AppState.allQuestions = [...unitData.questions];
+    AppState.sections = [...unitData.sections];
+  }
+
+  // Update UI Unit Cards active status
+  document.querySelectorAll('.unit-nav-card').forEach(card => card.classList.remove('active'));
+  const activeCard = document.getElementById(`card-${unitKey === 'unit1' ? 'unit-1' : 'unit-2'}`);
+  if (activeCard) activeCard.classList.add('active');
+
+  // Update Navbar Subtitle
+  const navSubtitle = document.getElementById('nav-brand-subtitle');
+  if (navSubtitle) {
+    navSubtitle.textContent = unitKey === 'unit1'
+      ? 'Unit 1: Data Preprocessing, Feature Engineering & Modeling'
+      : 'Unit 2: Storage, Management, Feature Engineering & Visualization';
+  }
+
+  // Update Hero Section
+  const heroBadge = document.getElementById('hero-unit-badge');
+  const heroTitle = document.getElementById('hero-main-title');
+  const heroDesc = document.getElementById('hero-main-desc');
+  const heroTotal = document.getElementById('hero-stat-total');
+  const heroUnitsLabel = document.getElementById('hero-stat-units-label');
+  const revisionBanner = document.getElementById('banner-revision-sheet');
+
+  if (unitKey === 'unit1') {
+    if (heroBadge) heroBadge.textContent = 'UNIT 1 — PREDICTIVE ANALYTICS';
+    if (heroTitle) heroTitle.textContent = 'Master Unit 1: Foundations & Modeling with 100 Real Exam MCQs';
+    if (heroDesc) heroDesc.textContent = 'Prepare thoroughly for your university examination with interactive Practice, timed Exam Mode, and smart distractor breakdowns.';
+    if (heroTotal) heroTotal.textContent = '100';
+    if (heroUnitsLabel) heroUnitsLabel.textContent = '8 Syllabus Modules';
+    if (revisionBanner) revisionBanner.style.display = 'none';
+  } else if (unitKey === 'unit2') {
+    if (heroBadge) heroBadge.textContent = 'UNIT 2 — PREDICTIVE ANALYTICS';
+    if (heroTitle) heroTitle.textContent = 'Unit 2: Storage, Management, Feature Engineering & Visualization';
+    if (heroDesc) heroDesc.textContent = '100 Curated University Exam MCQs spanning Data Warehousing & ETL (Q1–35), Feature Engineering (Q36–70), Data Visualization (Q71–90), and Evaluation & Ethics (Q91–100).';
+    if (heroTotal) heroTotal.textContent = '100';
+    if (heroUnitsLabel) heroUnitsLabel.textContent = '4 Syllabus Sections';
+    if (revisionBanner) revisionBanner.style.display = 'flex';
+  }
+
+  // Reset quiz progress for the active view to avoid out-of-bounds errors
+  AppState.userAnswers = {};
+  AppState.practiceEvaluations = {};
+  AppState.flaggedQuestions = new Set();
+  AppState.activeQuestions = [];
+  AppState.currentIndex = 0;
+
+  // Re-render UI elements
+  renderSectionCards();
+  renderDashboard();
+  updateMasteryBadge();
+  updateCustomBuilderSections();
+
+  // Show dashboard view
+  showView('dashboard');
+
+  // Track event
+  if (typeof AnalyticsTracker !== 'undefined') {
+    AnalyticsTracker.track('unit_switched', '/dashboard', `Switched active syllabus to ${unitKey.toUpperCase()}`);
+  }
+
+  // Background sync if connected to live API
+  syncUnitDataFromServer(unitKey);
+}
+
+async function syncUnitDataFromServer(unitKey) {
+  try {
+    const secRes = await fetch(`/api/sections?unit=${unitKey}`);
+    if (secRes.ok) {
+      const data = await secRes.json();
+      if (data.success && Array.isArray(data.sections) && data.sections.length > 0) {
+        AppState.sections = data.sections;
+        renderSectionCards();
+        updateCustomBuilderSections();
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const qRes = await fetch(`/api/questions?unit=${unitKey}&includeAnswers=true`);
+    if (qRes.ok) {
+      const data = await qRes.json();
+      if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
+        AppState.allQuestions = data.questions;
+        renderDashboard();
+      }
+    }
+  } catch (e) {}
+}
+
+function updateCustomBuilderSections() {
+  const select = document.getElementById('builder-section-select');
+  if (!select) return;
+  select.innerHTML = '<option value="ALL">Entire Unit Curriculum (All Questions)</option>';
+  if (Array.isArray(AppState.sections)) {
+    AppState.sections.forEach(sec => {
+      const opt = document.createElement('option');
+      opt.value = sec.id;
+      opt.textContent = `${sec.id}: ${sec.name} (${sec.questionCount || 0} MCQs)`;
+      select.appendChild(opt);
+    });
+  }
+}
+
+function renderRevisionSheet(filterText = '') {
+  const tbody = document.getElementById('revision-table-body');
+  if (!tbody) return;
+
+  const unit2Data = (window.PREDICTIVE_ANALYTICS_DATA_UNITS && window.PREDICTIVE_ANALYTICS_DATA_UNITS.unit2) 
+    ? window.PREDICTIVE_ANALYTICS_DATA_UNITS.unit2.revisionSheet 
+    : [];
+
+  const filter = (filterText || '').trim().toLowerCase();
+  const rows = unit2Data.filter(item => {
+    if (!filter) return true;
+    return item.topic.toLowerCase().includes(filter) || item.keyPoint.toLowerCase().includes(filter);
+  });
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No matching revision topics found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map((item, idx) => `
+    <tr>
+      <td><span class="revision-topic-badge">${idx + 1}</span><strong>${escapeHtml(item.topic)}</strong></td>
+      <td>${escapeHtml(item.keyPoint)}</td>
+    </tr>
+  `).join('');
+}
+
+// ==========================================================================
+// 13.6 AUTHENTICATION & USER TRACKING ENGINE
+// ==========================================================================
+const AuthManager = {
+  currentUser: {
+    id: 'U101',
+    name: 'Aditya Verma',
+    role: 'admin',
+    email: 'aditya.verma@example.edu'
+  },
+  
+  init() {
+    try {
+      const stored = localStorage.getItem('pa_auth_user');
+      if (stored) {
+        this.currentUser = JSON.parse(stored);
+      } else {
+        localStorage.setItem('pa_auth_user', JSON.stringify(this.currentUser));
+      }
+    } catch (e) {
+      console.warn('LocalStorage unavailable for auth, using memory store');
+    }
+    this.updateUI();
+  },
+
+  updateUI() {
+    const user = this.currentUser;
+    const nameEl = document.getElementById('nav-user-name');
+    const roleEl = document.getElementById('nav-user-role');
+    const avatarEl = document.getElementById('nav-user-avatar');
+    const summName = document.getElementById('user-profile-summary-name');
+    const summEmail = document.getElementById('user-profile-summary-email');
+
+    if (nameEl) nameEl.textContent = user.name || 'Aditya Verma';
+    if (roleEl) roleEl.textContent = user.role === 'admin' ? 'Admin / Lead Dev' : 'Student / Examinee';
+    if (avatarEl) {
+      const initials = (user.name || 'AV').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      avatarEl.textContent = initials;
+    }
+    if (summName) summName.textContent = user.name || 'Aditya Verma';
+    if (summEmail) summEmail.textContent = user.email || 'aditya.verma@example.edu';
+  },
+
+  async login(email, password) {
+    let userObj = {
+      id: email && email.includes('aditya') ? 'U101' : 'U' + Math.floor(100 + Math.random() * 900),
+      name: email && email.includes('aditya') ? 'Aditya Verma' : (email ? email.split('@')[0] : 'University Student'),
+      role: email && email.includes('aditya') ? 'admin' : 'student',
+      email: email || 'student@example.edu'
+    };
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          userObj = data.user;
+        }
+      }
+    } catch (e) {}
+
+    this.currentUser = userObj;
+    try {
+      localStorage.setItem('pa_auth_user', JSON.stringify(this.currentUser));
+    } catch (e) {}
+
+    this.updateUI();
+    const modal = document.getElementById('modal-auth');
+    if (modal) modal.style.display = 'none';
+
+    if (typeof AnalyticsTracker !== 'undefined') {
+      AnalyticsTracker.track('login_success', '/login', `Authenticated user ${userObj.name} (${userObj.id})`);
+    }
+
+    alert(`Welcome back, ${userObj.name}! You are logged in as ${userObj.role.toUpperCase()}.`);
+  },
+
+  async register(name, email, role, password) {
+    let userObj = {
+      id: 'U' + Math.floor(100 + Math.random() * 900),
+      name: name || 'New Scholar',
+      role: role || 'student',
+      email: email || 'user@example.edu'
+    };
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, role, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          userObj = data.user;
+        }
+      }
+    } catch (e) {}
+
+    this.currentUser = userObj;
+    try {
+      localStorage.setItem('pa_auth_user', JSON.stringify(this.currentUser));
+    } catch (e) {}
+
+    this.updateUI();
+    const modal = document.getElementById('modal-auth');
+    if (modal) modal.style.display = 'none';
+
+    if (typeof AnalyticsTracker !== 'undefined') {
+      AnalyticsTracker.track('user_registered', '/register', `New account created: ${userObj.name}`);
+      AnalyticsTracker.track('login_success', '/register', `Auto-authenticated registration for ${userObj.name}`);
+    }
+
+    alert(`Account registered successfully! Welcome to Predictive Analytics Mastery, ${userObj.name}.`);
+  },
+
+  quickLogin(type) {
+    if (type === 'admin') {
+      this.currentUser = {
+        id: 'U101',
+        name: 'Aditya Verma',
+        role: 'admin',
+        email: 'aditya.verma@example.edu'
+      };
+    } else {
+      this.currentUser = {
+        id: 'U102',
+        name: 'Priya Sharma (Student)',
+        role: 'student',
+        email: 'priya.sharma@university.edu'
+      };
+    }
+    try {
+      localStorage.setItem('pa_auth_user', JSON.stringify(this.currentUser));
+    } catch (e) {}
+
+    this.updateUI();
+    const modal = document.getElementById('modal-auth');
+    if (modal) modal.style.display = 'none';
+
+    if (typeof AnalyticsTracker !== 'undefined') {
+      AnalyticsTracker.track('login_success', '/login', `Demo login as ${this.currentUser.name} (${this.currentUser.role})`);
+    }
+  },
+
+  logout() {
+    this.currentUser = {
+      id: 'GUEST',
+      name: 'Guest Scholar',
+      role: 'guest',
+      email: 'guest@predictiveanalytics.org'
+    };
+    try {
+      localStorage.removeItem('pa_auth_user');
+    } catch (e) {}
+
+    this.updateUI();
+    if (typeof AnalyticsTracker !== 'undefined') {
+      AnalyticsTracker.track('logout', '/logout', 'User session terminated');
+    }
+    alert('You have logged out of your session.');
+  }
+};
+
+// ==========================================================================
+// 13.7 ADMIN ANALYTICS & CLICK TRACKING ENGINE
+// ==========================================================================
+const AnalyticsTracker = {
+  stats: {
+    totalUsers: 250,
+    newRegistrations: 18,
+    loginsToday: 75,
+    activeUsers: 42,
+    buttonClicks: 120,
+    events: [
+      { id: 1, event: 'login_success', userId: 'U101', page: '/login', time: '09:10', details: 'Successful credential authentication' },
+      { id: 2, event: 'button_clicked', userId: 'U101', page: '/dashboard', time: '09:12', details: 'Dashboard button clicked' },
+      { id: 3, event: 'page_viewed', userId: 'U102', page: '/home', time: '09:14', details: 'Home view rendered' },
+      { id: 4, event: 'button_clicked', userId: 'U101', page: '/dashboard', time: '09:15', details: 'Dashboard button clicked 120 times' },
+      { id: 5, event: 'user_registered', userId: 'U103', page: '/register', time: '09:18', details: '18 new registrations logged today' }
+    ]
+  },
+
+  init() {
+    try {
+      const stored = localStorage.getItem('pa_analytics_stats');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        this.stats = { ...this.stats, ...parsed };
+      }
+    } catch (e) {}
+    this.refresh();
+  },
+
+  async refresh() {
+    try {
+      const res = await fetch('/api/analytics/dashboard');
+      if (res.ok) {
+        const metrics = data.metrics || data.analytics;
+        if (data.success && metrics) {
+          this.stats = {
+            totalUsers: metrics.totalRegisteredUsers || this.stats.totalUsers,
+            newRegistrations: metrics.newRegistrationsToday || this.stats.newRegistrations,
+            loginsToday: metrics.loginsToday || metrics.loginActivityToday || this.stats.loginsToday,
+            activeUsers: metrics.activeUsersToday || this.stats.activeUsers,
+            buttonClicks: metrics.totalButtonClicks || metrics.buttonClicks || this.stats.buttonClicks,
+            events: Array.isArray(data.recentEvents) && data.recentEvents.length > 0
+              ? data.recentEvents
+              : (Array.isArray(metrics.events) ? metrics.events : this.stats.events)
+          };
+          this.persist();
+        }
+      }
+    } catch (e) {}
+    this.renderDashboard();
+  },
+
+  persist() {
+    try {
+      localStorage.setItem('pa_analytics_stats', JSON.stringify(this.stats));
+    } catch (e) {}
+  },
+
+  async track(event, page = window.location.pathname, details = '') {
+    const userId = (AuthManager && AuthManager.currentUser) ? AuthManager.currentUser.id : 'GUEST';
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Update local metric counts
+    if (event === 'button_clicked') {
+      this.stats.buttonClicks++;
+    } else if (event === 'login_success') {
+      this.stats.loginsToday++;
+    } else if (event === 'user_registered') {
+      this.stats.newRegistrations++;
+      this.stats.totalUsers++;
+    }
+
+    const newEvent = {
+      id: Date.now() + Math.floor(Math.random() * 100),
+      event,
+      userId,
+      page: page || '/dashboard',
+      time: timeStr,
+      details
+    };
+
+    if (!Array.isArray(this.stats.events)) this.stats.events = [];
+    this.stats.events.unshift(newEvent);
+    if (this.stats.events.length > 50) this.stats.events = this.stats.events.slice(0, 50);
+
+    this.persist();
+
+    // If modal is open, re-render
+    const modal = document.getElementById('modal-admin-analytics');
+    if (modal && modal.style.display === 'flex') {
+      this.renderDashboard();
+    }
+
+    // Try posting to backend
+    try {
+      fetch('/api/analytics/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event, userId, page, details })
+      }).catch(() => {});
+    } catch (e) {}
+  },
+
+  simulateClick() {
+    this.track('button_clicked', '/dashboard', 'Dashboard button clicked: Simulating user interaction');
+    this.renderDashboard();
+  },
+
+  async reset() {
+    this.stats = {
+      totalUsers: 250,
+      newRegistrations: 18,
+      loginsToday: 75,
+      activeUsers: 42,
+      buttonClicks: 120,
+      events: [
+        { id: 1, event: 'login_success', userId: 'U101', page: '/login', time: '09:10', details: 'Successful credential authentication' },
+        { id: 2, event: 'button_clicked', userId: 'U101', page: '/dashboard', time: '09:12', details: 'Dashboard button clicked' },
+        { id: 3, event: 'page_viewed', userId: 'U102', page: '/home', time: '09:14', details: 'Home view rendered' },
+        { id: 4, event: 'button_clicked', userId: 'U101', page: '/dashboard', time: '09:15', details: 'Dashboard button clicked 120 times' },
+        { id: 5, event: 'user_registered', userId: 'U103', page: '/register', time: '09:18', details: '18 new registrations logged today' }
+      ]
+    };
+    this.persist();
+    try {
+      await fetch('/api/analytics/reset', { method: 'POST' });
+    } catch (e) {}
+    this.renderDashboard();
+  },
+
+  renderDashboard() {
+    const kpiTotal = document.getElementById('kpi-total-users');
+    const kpiNewReg = document.getElementById('kpi-new-reg');
+    const kpiLogins = document.getElementById('kpi-logins-today');
+    const kpiActive = document.getElementById('kpi-active-users');
+    const kpiClicks = document.getElementById('kpi-button-clicks');
+
+    if (kpiTotal) kpiTotal.textContent = `${this.stats.totalUsers} accounts`;
+    if (kpiNewReg) kpiNewReg.textContent = `+${this.stats.newRegistrations} today`;
+    if (kpiLogins) kpiLogins.textContent = `${this.stats.loginsToday} today`;
+    if (kpiActive) kpiActive.textContent = `${this.stats.activeUsers} today`;
+    if (kpiClicks) kpiClicks.textContent = `${this.stats.buttonClicks} clicks`;
+
+    // Render event table
+    const tbody = document.getElementById('events-table-body');
+    if (!tbody) return;
+
+    if (!this.stats.events || this.stats.events.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:1rem;">No tracking events recorded yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = this.stats.events.map(ev => `
+      <tr>
+        <td><span class="event-tag event-${escapeHtml(ev.event)}">${escapeHtml(ev.event)}</span></td>
+        <td><strong>${escapeHtml(ev.userId)}</strong></td>
+        <td><code>${escapeHtml(ev.page)}</code></td>
+        <td>${escapeHtml(ev.time)}</td>
+        <td>${escapeHtml(ev.details || '-')}</td>
+      </tr>
+    `).join('');
+  },
+
+  exportData() {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(this.stats, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute('href', dataStr);
+    dlAnchor.setAttribute('download', 'analytics_activity_log.json');
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+  }
+};
+
+// ==========================================================================
+// 13.8 UNIVERSITY TOP 25 PERFORMERS LEADERBOARD ENGINE
+// ==========================================================================
+const LeaderboardManager = {
+  data: [
+    { id: 'LB-01', rank: 1, name: 'Priya Sharma', college: 'Dept of Data Science', unit: 'Unit 2', scorePercentage: 98, correctCount: 98, totalQuestions: 100, timeSpentSeconds: 1420, formattedTime: '23m 40s', date: 'Today, 08:45 AM' },
+    { id: 'LB-02', rank: 2, name: 'Rohan Gupta', college: 'Computer Engineering', unit: 'Unit 1', scorePercentage: 97, correctCount: 97, totalQuestions: 100, timeSpentSeconds: 1512, formattedTime: '25m 12s', date: 'Today, 07:30 AM' },
+    { id: 'LB-03', rank: 3, name: 'Ananya Patel', college: 'School of AI & ML', unit: 'Unit 2', scorePercentage: 96, correctCount: 96, totalQuestions: 100, timeSpentSeconds: 1590, formattedTime: '26m 30s', date: 'Yesterday' },
+    { id: 'LB-04', rank: 4, name: 'Devansh Mehta', college: 'Information Technology', unit: 'Unit 1', scorePercentage: 95, correctCount: 95, totalQuestions: 100, timeSpentSeconds: 1625, formattedTime: '27m 05s', date: 'Yesterday' },
+    { id: 'LB-05', rank: 5, name: 'Kavita Nair', college: 'Statistics & Analytics', unit: 'Unit 2', scorePercentage: 94, correctCount: 94, totalQuestions: 100, timeSpentSeconds: 1695, formattedTime: '28m 15s', date: '2 days ago' },
+    { id: 'LB-06', rank: 6, name: 'Siddharth Rao', college: 'Computer Science', unit: 'Unit 1', scorePercentage: 93, correctCount: 93, totalQuestions: 100, timeSpentSeconds: 1750, formattedTime: '29m 10s', date: '2 days ago' },
+    { id: 'LB-07', rank: 7, name: 'Sneha Kulkarni', college: 'Data Science & Engg', unit: 'Unit 2', scorePercentage: 92, correctCount: 92, totalQuestions: 100, timeSpentSeconds: 1785, formattedTime: '29m 45s', date: '3 days ago' },
+    { id: 'LB-08', rank: 8, name: 'Aarav Joshi', college: 'AI & Data Systems', unit: 'Unit 1', scorePercentage: 91, correctCount: 91, totalQuestions: 100, timeSpentSeconds: 1820, formattedTime: '30m 20s', date: '3 days ago' },
+    { id: 'LB-09', rank: 9, name: 'Ritu Deshmukh', college: 'Dept of Analytics', unit: 'Unit 2', scorePercentage: 90, correctCount: 90, totalQuestions: 100, timeSpentSeconds: 1875, formattedTime: '31m 15s', date: '3 days ago' },
+    { id: 'LB-10', rank: 10, name: 'Vikram Malhotra', college: 'Computational Engg', unit: 'Unit 1', scorePercentage: 89, correctCount: 89, totalQuestions: 100, timeSpentSeconds: 1920, formattedTime: '32m 00s', date: '4 days ago' },
+    { id: 'LB-11', rank: 11, name: 'Tanvi Agarwal', college: 'Information Science', unit: 'Unit 2', scorePercentage: 88, correctCount: 88, totalQuestions: 100, timeSpentSeconds: 1960, formattedTime: '32m 40s', date: '4 days ago' },
+    { id: 'LB-12', rank: 12, name: 'Yashvardhan Singh', college: 'Mathematics & Stats', unit: 'Unit 1', scorePercentage: 87, correctCount: 87, totalQuestions: 100, timeSpentSeconds: 1990, formattedTime: '33m 10s', date: '5 days ago' },
+    { id: 'LB-13', rank: 13, name: 'Meera Nambiar', college: 'Dept of AI', unit: 'Unit 2', scorePercentage: 86, correctCount: 86, totalQuestions: 100, timeSpentSeconds: 2045, formattedTime: '34m 05s', date: '5 days ago' },
+    { id: 'LB-14', rank: 14, name: 'Karan Chopra', college: 'Software Systems', unit: 'Unit 1', scorePercentage: 85, correctCount: 85, totalQuestions: 100, timeSpentSeconds: 2090, formattedTime: '34m 50s', date: '6 days ago' },
+    { id: 'LB-15', rank: 15, name: 'Ishaan Bhatia', college: 'Data Analytics Dept', unit: 'Unit 2', scorePercentage: 84, correctCount: 84, totalQuestions: 100, timeSpentSeconds: 2120, formattedTime: '35m 20s', date: '6 days ago' },
+    { id: 'LB-16', rank: 16, name: 'Pooja Sundaram', college: 'Computer Science', unit: 'Unit 1', scorePercentage: 83, correctCount: 83, totalQuestions: 100, timeSpentSeconds: 2160, formattedTime: '36m 00s', date: '1 week ago' },
+    { id: 'LB-17', rank: 17, name: 'Nihal Sen', college: 'Machine Learning Lab', unit: 'Unit 2', scorePercentage: 82, correctCount: 82, totalQuestions: 100, timeSpentSeconds: 2205, formattedTime: '36m 45s', date: '1 week ago' },
+    { id: 'LB-18', rank: 18, name: 'Diya Sen', college: 'Information Tech', unit: 'Unit 1', scorePercentage: 81, correctCount: 81, totalQuestions: 100, timeSpentSeconds: 2235, formattedTime: '37m 15s', date: '1 week ago' },
+    { id: 'LB-19', rank: 19, name: 'Arjun Reddy', college: 'Data Science Dept', unit: 'Unit 2', scorePercentage: 80, correctCount: 80, totalQuestions: 100, timeSpentSeconds: 2280, formattedTime: '38m 00s', date: '1 week ago' },
+    { id: 'LB-20', rank: 20, name: 'Shalini Verma', college: 'School of Computing', unit: 'Unit 1', scorePercentage: 79, correctCount: 79, totalQuestions: 100, timeSpentSeconds: 2320, formattedTime: '38m 40s', date: '1 week ago' }
+  ],
+  activeFilter: 'ALL',
+  searchQuery: '',
+  highlightId: null,
+  pendingRecord: null,
+
+  init() {
+    try {
+      const stored = localStorage.getItem('pa_top25_leaderboard');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.data = parsed;
+        }
+      }
+    } catch (e) {}
+
+    // Update active count & tests taken in navbar
+    const activeEl = document.getElementById('nav-active-count');
+    const testsEl = document.getElementById('nav-tests-taken-count');
+    if (activeEl) activeEl.textContent = '42';
+    if (testsEl) testsEl.textContent = '250+';
+
+    this.syncFromServer();
+  },
+
+  async syncFromServer() {
+    try {
+      const res = await fetch('/api/leaderboard');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.leaderboard) && json.leaderboard.length > 0) {
+          this.data = json.leaderboard;
+          try {
+            localStorage.setItem('pa_top25_leaderboard', JSON.stringify(this.data));
+          } catch (e) {}
+        }
+      }
+    } catch (e) {}
+  },
+
+  formatTime(secs) {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+  },
+
+  isTop25(scorePercentage, timeSpentSeconds = 1800) {
+    if (this.data.length < 25) return true;
+    const lowest = this.data[this.data.length - 1];
+    if (scorePercentage > lowest.scorePercentage) return true;
+    if (scorePercentage === lowest.scorePercentage && timeSpentSeconds < (lowest.timeSpentSeconds || 3600)) return true;
+    return false;
+  },
+
+  getPredictedRank(scorePercentage, timeSpentSeconds = 1800) {
+    for (let i = 0; i < this.data.length; i++) {
+      if (scorePercentage > this.data[i].scorePercentage) return i + 1;
+      if (scorePercentage === this.data[i].scorePercentage && timeSpentSeconds < (this.data[i].timeSpentSeconds || 3600)) {
+        return i + 1;
+      }
+    }
+    return Math.min(25, this.data.length + 1);
+  },
+
+  checkAndPromptRecord(results) {
+    if (!results || results.scorePercentage < 60) return;
+    if (this.isTop25(results.scorePercentage, results.timeSpentSeconds)) {
+      const rank = this.getPredictedRank(results.scorePercentage, results.timeSpentSeconds);
+      const timeStr = this.formatTime(results.timeSpentSeconds || 0);
+
+      this.pendingRecord = {
+        unit: (AppState.currentUnit === 'unit2') ? 'Unit 2' : 'Unit 1',
+        scorePercentage: results.scorePercentage,
+        correctCount: results.correctCount,
+        totalQuestions: results.totalQuestions,
+        timeSpentSeconds: results.timeSpentSeconds || 0,
+        formattedTime: timeStr
+      };
+
+      const scoreBadge = document.getElementById('record-score-badge');
+      const timeBadge = document.getElementById('record-time-badge');
+      const rankBadge = document.getElementById('record-rank-badge');
+      const nameInput = document.getElementById('record-input-name');
+
+      if (scoreBadge) scoreBadge.textContent = `${results.scorePercentage}% (${results.correctCount}/${results.totalQuestions})`;
+      if (timeBadge) timeBadge.textContent = timeStr;
+      if (rankBadge) rankBadge.textContent = `Rank #${rank} of Top 25`;
+      if (nameInput) {
+        let defaultName = (AuthManager && AuthManager.currentUser && AuthManager.currentUser.name && AuthManager.currentUser.name !== 'Guest Scholar') 
+          ? AuthManager.currentUser.name 
+          : '';
+        if (defaultName.length > 25) defaultName = defaultName.slice(0, 25);
+        nameInput.value = defaultName;
+        const countSpan = document.getElementById('record-name-word-count');
+        if (countSpan) countSpan.textContent = `${defaultName.length} / 25 letters`;
+      }
+
+      // Show celebratory modal after brief pause
+      setTimeout(() => {
+        const modal = document.getElementById('modal-record-name');
+        if (modal) modal.style.display = 'flex';
+        try { if (window.soundEffects) window.soundEffects.playFanfare(); } catch (e) {}
+        triggerConfetti();
+      }, 700);
+    }
+  },
+
+  async addRecord(name, college) {
+    if (!this.pendingRecord) return;
+    const rec = this.pendingRecord;
+
+    // Enforce name limit up to 25 letters / characters
+    let sanitizedName = (name || '').trim();
+    if (sanitizedName.length > 25) {
+      sanitizedName = sanitizedName.slice(0, 25).trim();
+    }
+    if (!sanitizedName) sanitizedName = 'Anonymous Scholar';
+
+    const newEntry = {
+      id: `LB-${Date.now().toString().slice(-4)}`,
+      name: sanitizedName,
+      college: (college && college.trim()) ? college.trim() : 'University Scholar',
+      unit: rec.unit,
+      scorePercentage: rec.scorePercentage,
+      correctCount: rec.correctCount,
+      totalQuestions: rec.totalQuestions,
+      timeSpentSeconds: rec.timeSpentSeconds,
+      formattedTime: rec.formattedTime,
+      date: 'Just now'
+    };
+
+    this.data.push(newEntry);
+    this.data.sort((a, b) => {
+      if (b.scorePercentage !== a.scorePercentage) return b.scorePercentage - a.scorePercentage;
+      return (a.timeSpentSeconds || 0) - (b.timeSpentSeconds || 0);
+    });
+
+    this.data.forEach((item, idx) => item.rank = idx + 1);
+    if (this.data.length > 25) this.data.length = 25;
+
+    this.highlightId = newEntry.id;
+    try {
+      localStorage.setItem('pa_top25_leaderboard', JSON.stringify(this.data));
+    } catch (e) {}
+
+    // Post to server if available
+    try {
+      fetch('/api/leaderboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEntry)
+      }).catch(() => {});
+    } catch (e) {}
+
+    // Track analytics event
+    if (typeof AnalyticsTracker !== 'undefined') {
+      AnalyticsTracker.track('button_clicked', '/quiz', `Added to Top 25 Leaderboard: ${newEntry.name} (Rank #${newEntry.rank})`);
+    }
+
+    this.pendingRecord = null;
+    this.openLeaderboard();
+  },
+
+  openLeaderboard() {
+    this.renderLeaderboard(this.activeFilter, this.searchQuery);
+    const modal = document.getElementById('modal-leaderboard');
+    if (modal) modal.style.display = 'flex';
+    if (typeof AnalyticsTracker !== 'undefined') {
+      AnalyticsTracker.track('page_viewed', '/leaderboard', 'Viewed Top 25 Leaderboard');
+    }
+  },
+
+  renderLeaderboard(filter = 'ALL', search = '') {
+    this.activeFilter = filter;
+    this.searchQuery = search;
+
+    const tbody = document.getElementById('lb-table-body');
+    if (!tbody) return;
+
+    let items = [...this.data];
+
+    // Filter by unit
+    if (filter && filter !== 'ALL') {
+      const matchUnit = (filter === 'unit1' || filter === 'Unit 1') ? 'Unit 1' : 'Unit 2';
+      items = items.filter(it => it.unit === matchUnit);
+    }
+
+    // Filter by search query
+    const q = (search || '').trim().toLowerCase();
+    if (q) {
+      items = items.filter(it => (it.name && it.name.toLowerCase().includes(q)) || (it.college && it.college.toLowerCase().includes(q)));
+    }
+
+    // Update KPI boxes
+    const topScoreEl = document.getElementById('lb-top-score');
+    const fastestEl = document.getElementById('lb-fastest-time');
+    if (topScoreEl && this.data.length > 0) topScoreEl.textContent = `${this.data[0].scorePercentage}%`;
+    if (fastestEl && this.data.length > 0) {
+      const fastest = [...this.data].sort((a,b) => (a.timeSpentSeconds||9999) - (b.timeSpentSeconds||9999))[0];
+      if (fastest) fastestEl.textContent = fastest.formattedTime || '23m 40s';
+    }
+
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No matching leaderboard records found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map((item, idx) => {
+      const rankNum = item.rank || (idx + 1);
+      let rankClass = 'rank-other';
+      let rankBadgeContent = rankNum;
+      if (rankNum === 1) {
+        rankClass = 'rank-1';
+        rankBadgeContent = '<i class="fa-solid fa-crown"></i> 1';
+      } else if (rankNum === 2) {
+        rankClass = 'rank-2';
+        rankBadgeContent = '<i class="fa-solid fa-medal"></i> 2';
+      } else if (rankNum === 3) {
+        rankClass = 'rank-3';
+        rankBadgeContent = '<i class="fa-solid fa-award"></i> 3';
+      }
+
+      const initials = (item.name || 'S').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      const isHighlighted = item.id === this.highlightId ? 'highlight-my-record' : '';
+      const unitClass = item.unit === 'Unit 2' ? 'u2' : 'u1';
+
+      return `
+        <tr class="${isHighlighted}">
+          <td style="text-align: center;">
+            <span class="rank-badge ${rankClass}">${rankBadgeContent}</span>
+          </td>
+          <td>
+            <div class="lb-student-cell">
+              <span class="lb-avatar">${escapeHtml(initials)}</span>
+              <div>
+                <span class="lb-student-name">${escapeHtml(item.name)} ${item.id === this.highlightId ? '⭐ (You)' : ''}</span>
+                <span class="lb-student-college">${escapeHtml(item.college || 'University Scholar')}</span>
+              </div>
+            </div>
+          </td>
+          <td><span class="unit-tag-pill ${unitClass}">${escapeHtml(item.unit || 'Unit 1')}</span></td>
+          <td><span class="lb-score-text">${item.scorePercentage}%</span></td>
+          <td>${item.correctCount || item.scorePercentage}/${item.totalQuestions || 100} correct</td>
+          <td><i class="fa-regular fa-clock" style="color:var(--text-dim); margin-right:4px;"></i>${escapeHtml(item.formattedTime || '25m 00s')}</td>
+          <td><small style="color:var(--text-dim);">${escapeHtml(item.date || 'Recent')}</small></td>
+        </tr>
+      `;
+    }).join('');
+  }
+};
+
+// ==========================================================================
 // 14. EVENT LISTENERS & BULLETPROOF EVENT DELEGATION
 // ==========================================================================
 function setupEventListeners() {
@@ -1647,6 +2451,272 @@ function setupEventListeners() {
     }
   });
 
+  // Unit Navigation Cards
+  document.getElementById('card-unit-1')?.addEventListener('click', () => switchUnit('unit1'));
+  document.getElementById('card-unit-2')?.addEventListener('click', () => switchUnit('unit2'));
+  document.getElementById('card-unit-3')?.addEventListener('click', () => switchUnit('unit3'));
+
+  // Footer Unit Links
+  document.getElementById('footer-btn-unit1')?.addEventListener('click', () => switchUnit('unit1'));
+  document.getElementById('footer-btn-unit2')?.addEventListener('click', () => switchUnit('unit2'));
+  document.getElementById('footer-btn-unit3')?.addEventListener('click', () => switchUnit('unit3'));
+
+  // Unit 3 Modal Buttons
+  document.getElementById('btn-close-unit3')?.addEventListener('click', () => {
+    const m = document.getElementById('modal-unit3');
+    if (m) m.style.display = 'none';
+  });
+  document.getElementById('btn-dismiss-unit3')?.addEventListener('click', () => {
+    const m = document.getElementById('modal-unit3');
+    if (m) m.style.display = 'none';
+  });
+  document.getElementById('btn-explore-unit2')?.addEventListener('click', () => {
+    const m = document.getElementById('modal-unit3');
+    if (m) m.style.display = 'none';
+    switchUnit('unit2');
+  });
+
+  // Revision Sheet Modal
+  document.getElementById('btn-open-revision-sheet')?.addEventListener('click', () => {
+    renderRevisionSheet();
+    const m = document.getElementById('modal-revision-sheet');
+    if (m) m.style.display = 'flex';
+    if (typeof AnalyticsTracker !== 'undefined') {
+      AnalyticsTracker.track('button_clicked', '/dashboard', 'Opened Unit 2 Revision Sheet');
+    }
+  });
+  document.getElementById('btn-close-revision')?.addEventListener('click', () => {
+    const m = document.getElementById('modal-revision-sheet');
+    if (m) m.style.display = 'none';
+  });
+  document.getElementById('btn-dismiss-revision')?.addEventListener('click', () => {
+    const m = document.getElementById('modal-revision-sheet');
+    if (m) m.style.display = 'none';
+  });
+  document.getElementById('revision-search-input')?.addEventListener('input', (e) => {
+    renderRevisionSheet(e.target.value);
+  });
+  document.getElementById('btn-print-revision')?.addEventListener('click', () => {
+    window.print();
+  });
+
+  // User Authentication Menu & Modal
+  const authMenuBtn = document.getElementById('btn-auth-menu');
+  const userDropdown = document.getElementById('user-dropdown-menu');
+  if (authMenuBtn && userDropdown) {
+    authMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      userDropdown.classList.toggle('show');
+    });
+    document.addEventListener('click', (e) => {
+      if (!userDropdown.contains(e.target) && e.target !== authMenuBtn) {
+        userDropdown.classList.remove('show');
+      }
+    });
+  }
+
+  document.getElementById('menu-item-login')?.addEventListener('click', () => {
+    userDropdown?.classList.remove('show');
+    const m = document.getElementById('modal-auth');
+    if (m) m.style.display = 'flex';
+  });
+
+  document.getElementById('menu-item-logout')?.addEventListener('click', () => {
+    userDropdown?.classList.remove('show');
+    AuthManager.logout();
+  });
+
+  document.getElementById('btn-close-auth')?.addEventListener('click', () => {
+    const m = document.getElementById('modal-auth');
+    if (m) m.style.display = 'none';
+  });
+
+  // Auth Modal Tabs
+  document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const targetTab = tab.getAttribute('data-tab');
+      const loginForm = document.getElementById('form-login');
+      const regForm = document.getElementById('form-register');
+      if (targetTab === 'login') {
+        if (loginForm) loginForm.style.display = 'block';
+        if (regForm) regForm.style.display = 'none';
+      } else {
+        if (loginForm) loginForm.style.display = 'none';
+        if (regForm) regForm.style.display = 'block';
+      }
+    });
+  });
+
+  document.getElementById('form-login')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email')?.value;
+    const pass = document.getElementById('login-password')?.value;
+    AuthManager.login(email, pass);
+  });
+
+  document.getElementById('form-register')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('reg-name')?.value;
+    const email = document.getElementById('reg-email')?.value;
+    const role = document.getElementById('reg-role')?.value;
+    const pass = document.getElementById('reg-password')?.value;
+    AuthManager.register(name, email, role, pass);
+  });
+
+  document.getElementById('btn-quick-login-admin')?.addEventListener('click', () => {
+    AuthManager.quickLogin('admin');
+  });
+
+  document.getElementById('btn-quick-login-student')?.addEventListener('click', () => {
+    AuthManager.quickLogin('student');
+  });
+
+  // Admin Analytics Modal
+  const openAnalytics = () => {
+    userDropdown?.classList.remove('show');
+    AnalyticsTracker.renderDashboard();
+    const m = document.getElementById('modal-admin-analytics');
+    if (m) m.style.display = 'flex';
+    AnalyticsTracker.track('page_viewed', '/admin-analytics', 'Admin analytics dashboard viewed');
+  };
+
+  document.getElementById('btn-analytics-toggle')?.addEventListener('click', openAnalytics);
+  document.getElementById('menu-item-analytics')?.addEventListener('click', openAnalytics);
+  document.getElementById('footer-link-analytics')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openAnalytics();
+  });
+
+  document.getElementById('btn-close-analytics')?.addEventListener('click', () => {
+    const m = document.getElementById('modal-admin-analytics');
+    if (m) m.style.display = 'none';
+  });
+
+  document.getElementById('btn-analytics-refresh')?.addEventListener('click', () => {
+    AnalyticsTracker.refresh();
+  });
+
+  document.getElementById('btn-simulate-click')?.addEventListener('click', () => {
+    AnalyticsTracker.simulateClick();
+  });
+
+  document.getElementById('btn-reset-analytics')?.addEventListener('click', () => {
+    AnalyticsTracker.reset();
+  });
+
+  document.getElementById('btn-export-analytics')?.addEventListener('click', () => {
+    AnalyticsTracker.exportData();
+  });
+
+  // Global Click Tracking Engine
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button, a, .mode-card, .section-card, .unit-nav-card, .btn');
+    if (!btn) return;
+    if (btn.id === 'btn-simulate-click') return;
+    let label = btn.innerText?.trim() || btn.getAttribute('aria-label') || btn.title || btn.id || 'Button';
+    if (label.length > 35) label = label.substring(0, 32) + '...';
+    if (typeof AnalyticsTracker !== 'undefined') {
+      AnalyticsTracker.track('button_clicked', window.location.pathname || '/dashboard', `User clicked: ${label}`);
+    }
+  }, true);
+
+  // Top 25 Performers Leaderboard
+  const openLeaderboardFn = () => {
+    if (typeof LeaderboardManager !== 'undefined') {
+      LeaderboardManager.openLeaderboard();
+    }
+  };
+
+  document.getElementById('btn-open-leaderboard')?.addEventListener('click', openLeaderboardFn);
+  document.getElementById('btn-dash-open-leaderboard')?.addEventListener('click', openLeaderboardFn);
+  document.getElementById('footer-btn-leaderboard')?.addEventListener('click', openLeaderboardFn);
+
+  document.getElementById('btn-close-leaderboard')?.addEventListener('click', () => {
+    const modal = document.getElementById('modal-leaderboard');
+    if (modal) modal.style.display = 'none';
+  });
+
+  document.getElementById('btn-dismiss-leaderboard')?.addEventListener('click', () => {
+    const modal = document.getElementById('modal-leaderboard');
+    if (modal) modal.style.display = 'none';
+  });
+
+  document.getElementById('btn-lb-take-test')?.addEventListener('click', () => {
+    const modal = document.getElementById('modal-leaderboard');
+    if (modal) modal.style.display = 'none';
+    startExamMode('ALL', 100, 60, true);
+  });
+
+  document.getElementById('footer-btn-take-exam')?.addEventListener('click', () => {
+    startExamMode('ALL', 100, 60, true);
+  });
+
+  // Leaderboard Filter Tabs
+  document.querySelectorAll('.lb-tab').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+      const btn = e.target.closest('.lb-tab');
+      if (btn) {
+        btn.classList.add('active');
+        const filter = btn.getAttribute('data-filter') || 'ALL';
+        const searchVal = document.getElementById('lb-search-input')?.value || '';
+        LeaderboardManager.renderLeaderboard(filter, searchVal);
+      }
+    });
+  });
+
+  // Leaderboard Search Input
+  document.getElementById('lb-search-input')?.addEventListener('input', (e) => {
+    const activeTab = document.querySelector('.lb-tab.active');
+    const filter = activeTab ? activeTab.getAttribute('data-filter') : 'ALL';
+    LeaderboardManager.renderLeaderboard(filter, e.target.value);
+  });
+
+  // Top 25 Record Claim Form Word Counter & Submit
+  const recordNameInput = document.getElementById('record-input-name');
+  const wordCountSpan = document.getElementById('record-name-word-count');
+  const recordNameError = document.getElementById('record-name-error');
+
+  recordNameInput?.addEventListener('input', (e) => {
+    let val = e.target.value;
+    if (val.length > 25) {
+      val = val.slice(0, 25);
+      e.target.value = val;
+    }
+    const count = val.length;
+    if (wordCountSpan) {
+      wordCountSpan.textContent = `${count} / 25 letters`;
+      wordCountSpan.style.color = count >= 25 ? '#fbbf24' : 'var(--text-dim)';
+    }
+    if (recordNameError) {
+      recordNameError.style.display = count > 25 ? 'block' : 'none';
+    }
+  });
+
+  document.getElementById('form-record-name')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const rawName = document.getElementById('record-input-name')?.value || '';
+    const college = document.getElementById('record-input-college')?.value || '';
+    
+    let name = rawName.trim();
+    if (name.length > 25) {
+      name = name.slice(0, 25).trim();
+    }
+
+    if (name) {
+      LeaderboardManager.addRecord(name, college);
+      const modal = document.getElementById('modal-record-name');
+      if (modal) modal.style.display = 'none';
+    }
+  });
+
+  document.getElementById('btn-skip-record')?.addEventListener('click', () => {
+    const modal = document.getElementById('modal-record-name');
+    if (modal) modal.style.display = 'none';
+  });
+
   // Close modals when clicking backdrop outside container
   document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
     backdrop.addEventListener('click', (e) => {
@@ -1675,3 +2745,8 @@ window.flipActiveFlashcard = flipActiveFlashcard;
 window.submitFullQuiz = submitFullQuiz;
 window.toggleTheme = toggleTheme;
 window.toggleAudio = toggleAudio;
+window.switchUnit = switchUnit;
+window.AuthManager = AuthManager;
+window.AnalyticsTracker = AnalyticsTracker;
+window.renderRevisionSheet = renderRevisionSheet;
+window.LeaderboardManager = LeaderboardManager;

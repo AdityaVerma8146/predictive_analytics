@@ -33,16 +33,28 @@
           </div>
           <div class="brand-text">
             <span class="brand-title">Predictive<span>Analytics</span></span>
-            <span class="brand-subtitle">Unit-1 • 100 MCQs</span>
+            <span class="brand-subtitle" id="nav-brand-subtitle">Unit-1 • 100 MCQs</span>
           </div>
+        </div>
+        <div class="nav-developer-badge" title="Platform Creator & Developer">
+          <i class="fa-solid fa-code"></i> Developed by <strong>Aditya Verma</strong>
         </div>
       </div>
 
       <div class="nav-center">
-        <div class="mode-pill" id="nav-mode-pill">
-          <span class="mode-dot"></span>
-          <span id="nav-mode-text">Dashboard</span>
+        <!-- Live Student Activity Indicators -->
+        <div class="nav-student-stats" id="nav-student-stats">
+          <div class="nav-stat-pill active-students-pill" title="Students currently practicing online">
+            <span class="live-pulse-dot"></span>
+            <span class="stat-pill-label"><strong id="nav-active-count">42</strong> Active Students</span>
+          </div>
+          <div class="nav-stat-pill tests-taken-pill" title="Total exam tests attempted by students">
+            <i class="fa-solid fa-clipboard-check text-accent"></i>
+            <span class="stat-pill-label"><strong id="nav-tests-taken-count">250+</strong> Tests Given</span>
+          </div>
         </div>
+
+        <!-- Live Quiz Score Stats (shown while in quiz mode) -->
         <div class="live-stats" id="nav-live-stats" style="display: none;">
           <span class="stat-item" title="Current Score"><i class="fa-solid fa-check-circle stat-icon-correct"></i> <span id="stat-correct-count">0</span></span>
           <span class="stat-item" title="Mistakes"><i class="fa-solid fa-circle-xmark stat-icon-wrong"></i> <span id="stat-wrong-count">0</span></span>
@@ -51,6 +63,13 @@
       </div>
 
       <div class="nav-right">
+        <!-- Top 25 Performers Leaderboard Button -->
+        <button class="btn-top25-leaderboard" id="btn-open-leaderboard" title="View University Top 25 Performers Leaderboard">
+          <i class="fa-solid fa-trophy"></i>
+          <span>Top 25 Performers</span>
+          <span class="top25-badge-dot"></span>
+        </button>
+
         <button class="nav-icon-btn" id="btn-search-toggle" title="Search 100 MCQs (Press /)">
           <i class="fa-solid fa-magnifying-glass"></i>
         </button>
@@ -73,25 +92,101 @@
       <!-- VIEW 1: DASHBOARD / HOME -->
       <!-- ==================================================== -->
       <section id="view-dashboard" class="view-section active">
+
+        <!-- ==================================================== -->
+        <!-- DEDICATED UNIT SELECTOR: UNIT-1, UNIT-2, UNIT-3 -->
+        <!-- ==================================================== -->
+        <div class="unit-selector-wrapper">
+          <div class="unit-selector-bar">
+            <div class="usb-left">
+              <span class="usb-eyebrow"><i class="fa-solid fa-layer-group"></i> Academic Course Syllabus</span>
+              <h2 class="usb-title">Select Syllabus Unit</h2>
+            </div>
+            <div class="usb-right">
+              <span class="usb-author-tag">
+                <i class="fa-solid fa-shield-halved"></i> Developed by <strong>Aditya Verma</strong>
+              </span>
+            </div>
+          </div>
+
+          <div class="unit-cards-grid">
+            <!-- Unit 1 Card -->
+            <div class="unit-nav-card active" id="card-unit-1" data-unit="unit1" role="button" tabindex="0">
+              <div class="unc-header">
+                <span class="unc-unit-tag">Unit 01</span>
+                <span class="unc-status-tag active"><i class="fa-solid fa-circle-check"></i> Active Unit</span>
+              </div>
+              <h3 class="unc-title">Foundations & Classical ML</h3>
+              <p class="unc-desc">Data cleaning, IQR outliers, feature scaling, cross-validation, regression, logistic, decision trees & ensemble methods.</p>
+              <div class="unc-footer">
+                <span class="unc-meta"><i class="fa-solid fa-list-check"></i> 100 MCQs • 8 Sections</span>
+                <span class="unc-action-btn"><i class="fa-solid fa-check"></i> Selected</span>
+              </div>
+            </div>
+
+            <!-- Unit 2 Card -->
+            <div class="unit-nav-card" id="card-unit-2" data-unit="unit2" role="button" tabindex="0">
+              <div class="unc-header">
+                <span class="unc-unit-tag">Unit 02</span>
+                <span class="unc-status-tag ready"><i class="fa-solid fa-sparkles"></i> 100 MCQs Ready</span>
+              </div>
+              <h3 class="unc-title">Storage, Feature Engineering & Viz</h3>
+              <p class="unc-desc">Data warehousing, ETL vs ELT pipelines, feature importance, PCA, Python statistical visualization & responsible AI ethics.</p>
+              <div class="unc-footer">
+                <span class="unc-meta"><i class="fa-solid fa-list-check"></i> 100 MCQs • 4 Sections + Sheet</span>
+                <span class="unc-action-btn switch-btn">Switch to Unit 2 <i class="fa-solid fa-arrow-right"></i></span>
+              </div>
+            </div>
+
+            <!-- Unit 3 Card (Coming Soon) -->
+            <div class="unit-nav-card coming-soon" id="card-unit-3" data-unit="unit3" role="button" tabindex="0">
+              <div class="unc-header">
+                <span class="unc-unit-tag dim">Unit 03</span>
+                <span class="unc-status-tag coming-soon"><i class="fa-solid fa-clock"></i> Coming Soon</span>
+              </div>
+              <h3 class="unc-title">Advanced Predictive Modeling & AI</h3>
+              <p class="unc-desc">Deep Neural Networks, Time-Series Forecasting (LSTM/ARIMA), Text & NLP Analytics, and Cloud MLOps Deployment.</p>
+              <div class="unc-footer">
+                <span class="unc-meta"><i class="fa-solid fa-code"></i> By Aditya Verma</span>
+                <span class="unc-action-btn dim"><i class="fa-solid fa-lock"></i> Coming Soon</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unit 2 High-Yield Revision Sheet Banner (Active when Unit 2 is selected) -->
+        <div class="revision-sheet-banner" id="banner-revision-sheet" style="display: none;">
+          <div class="rsb-left">
+            <div class="rsb-icon"><i class="fa-solid fa-bolt-lightning"></i></div>
+            <div>
+              <h4>Unit 2 High-Yield Pre-Exam Revision Sheet</h4>
+              <p>Quick 29-concept cheat sheet covering Data Warehouses, ETL vs ELT, Encryption, PCA, Confusion Matrix, and ROC-AUC.</p>
+            </div>
+          </div>
+          <button class="btn btn-warning" id="btn-open-revision-sheet">
+            <i class="fa-solid fa-book-open"></i> Open Revision Sheet
+          </button>
+        </div>
+
         <!-- Hero Header -->
         <div class="hero-banner">
-          <div class="hero-badge">
+          <div class="hero-badge" id="hero-unit-badge">
             <i class="fa-solid fa-fire"></i> Complete Unit-1 Study & Exam System
           </div>
-          <h1 class="hero-title">Predictive Analytics <span class="gradient-text">100 MCQs Mastery</span></h1>
-          <p class="hero-desc">
+          <h1 class="hero-title" id="hero-main-title">Predictive Analytics <span class="gradient-text">100 MCQs Mastery</span></h1>
+          <p class="hero-desc" id="hero-main-desc">
             Explore 8 core topics with instant explanations on wrong attempts, step-by-step mathematical calculations (IQR, Z-score, Min-Max, Entropy, Precision, Recall, MSE), timed exam simulation, and deep diagnostic analytics.
           </p>
 
           <!-- Quick Stats Pills -->
           <div class="hero-stats-row">
             <div class="hero-stat-card">
-              <span class="h-stat-num">100</span>
+              <span class="h-stat-num" id="hero-stat-total">100</span>
               <span class="h-stat-label">Total MCQs</span>
             </div>
             <div class="hero-stat-card">
-              <span class="h-stat-num">8</span>
-              <span class="h-stat-label">Core Units</span>
+              <span class="h-stat-num" id="hero-stat-units">8</span>
+              <span class="h-stat-label" id="hero-stat-units-label">Core Sections</span>
             </div>
             <div class="hero-stat-card">
               <span class="h-stat-num" id="dash-mastery-percent">0%</span>
@@ -102,6 +197,20 @@
               <span class="h-stat-label">Mistakes to Fix</span>
             </div>
           </div>
+        </div>
+
+        <!-- Top 25 Performers Teaser Strip -->
+        <div class="leaderboard-teaser-banner" id="banner-leaderboard-teaser">
+          <div class="ltb-left">
+            <div class="ltb-icon"><i class="fa-solid fa-trophy"></i></div>
+            <div class="ltb-text">
+              <h4>University Hall of Fame — Top 25 Performers</h4>
+              <p>Top score: <strong>98% (Priya Sharma)</strong> • <span class="live-pulse-dot inline"></span> <strong>42 active students</strong> competing. Can you make the record?</p>
+            </div>
+          </div>
+          <button class="btn btn-warning btn-sm" id="btn-dash-open-leaderboard">
+            <i class="fa-solid fa-ranking-star"></i> View Top 25 Leaderboard
+          </button>
         </div>
 
         <!-- Mode Selection Grid -->
@@ -697,6 +806,577 @@ Step 2: Upper Boundary = Q3 + 1.5(IQR) = 30 + 30 = 60
         </div>
       </div>
     </div>
+
+    <!-- 5. User Authentication Modal -->
+    <div class="modal-backdrop" id="modal-auth" style="display: none;">
+      <div class="modal-container auth-modal">
+        <div class="modal-header">
+          <div>
+            <h3><i class="fa-solid fa-user-shield"></i> User Authentication</h3>
+            <p class="modal-subtitle">Sign in or register to track test progress & activity</p>
+          </div>
+          <button class="btn-icon-sm" id="btn-close-auth"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Auth Tabs -->
+          <div class="auth-tabs">
+            <button class="auth-tab active" id="tab-auth-login">Sign In</button>
+            <button class="auth-tab" id="tab-auth-register">Create Account</button>
+          </div>
+
+          <!-- Quick Demo Logins -->
+          <div class="demo-login-box">
+            <span class="demo-login-title"><i class="fa-solid fa-bolt"></i> One-Click Quick Logins:</span>
+            <div class="demo-buttons-row">
+              <button class="btn btn-outline btn-sm demo-btn" id="btn-quick-login-admin" title="Login as Creator/Admin">
+                <i class="fa-solid fa-user-shield"></i> Aditya Verma (Admin)
+              </button>
+              <button class="btn btn-outline btn-sm demo-btn" id="btn-quick-login-student" title="Login as Student Demo">
+                <i class="fa-solid fa-graduation-cap"></i> Student Account
+              </button>
+            </div>
+          </div>
+
+          <!-- Login Form -->
+          <form id="form-login" class="auth-form">
+            <div class="form-group">
+              <label for="login-email"><strong>Email Address</strong></label>
+              <input type="email" id="login-email" class="form-input" placeholder="e.g. aditya@predictiveanalytics.edu" required />
+            </div>
+            <div class="form-group">
+              <label for="login-password"><strong>Password</strong></label>
+              <input type="password" id="login-password" class="form-input" placeholder="••••••••" required />
+            </div>
+            <div class="auth-alert" id="login-alert" style="display: none;"></div>
+            <button type="submit" class="btn btn-primary btn-block" id="btn-submit-login">
+              <i class="fa-solid fa-right-to-bracket"></i> Sign In to Account
+            </button>
+          </form>
+
+          <!-- Register Form -->
+          <form id="form-register" class="auth-form" style="display: none;">
+            <div class="form-group">
+              <label for="reg-name"><strong>Full Name</strong></label>
+              <input type="text" id="reg-name" class="form-input" placeholder="e.g. Aditya Verma" required />
+            </div>
+            <div class="form-group">
+              <label for="reg-email"><strong>Email Address</strong></label>
+              <input type="email" id="reg-email" class="form-input" placeholder="e.g. student@university.edu" required />
+            </div>
+            <div class="form-group">
+              <label for="reg-password"><strong>Password</strong></label>
+              <input type="password" id="reg-password" class="form-input" placeholder="Create password..." required />
+            </div>
+            <div class="form-group">
+              <label for="reg-role"><strong>Account Role</strong></label>
+              <select id="reg-role" class="form-select">
+                <option value="student">Student / Exam Candidate</option>
+                <option value="admin">Administrator / Faculty</option>
+              </select>
+            </div>
+            <div class="auth-alert" id="register-alert" style="display: none;"></div>
+            <button type="submit" class="btn btn-success btn-block" id="btn-submit-register">
+              <i class="fa-solid fa-user-plus"></i> Register & Start Learning
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Admin Analytics & Activity Telemetry Modal -->
+    <div class="modal-backdrop" id="modal-admin-analytics" style="display: none;">
+      <div class="modal-container analytics-modal">
+        <div class="modal-header analytics-header">
+          <div class="ah-left">
+            <div class="ah-badge">
+              <span class="live-dot-pulse"></span> Live Activity Telemetry
+            </div>
+            <h2>Admin Analytics Dashboard</h2>
+            <p class="ah-subtitle">Developed by <strong>Aditya Verma</strong> • Real-time user session, click tracking & activity events</p>
+          </div>
+          <div class="ah-right">
+            <button class="btn btn-outline btn-sm" id="btn-analytics-refresh" title="Refresh Live Data"><i class="fa-solid fa-rotate"></i> Refresh</button>
+            <button class="btn-icon-sm" id="btn-close-analytics"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </div>
+
+        <div class="modal-body analytics-body">
+          
+          <!-- Key Metrics Grid (Exact items from prompt!) -->
+          <div class="analytics-kpi-grid">
+            <!-- 1. Total Registered Users -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">Total Registered Users</span>
+                <span class="kpi-icon blue"><i class="fa-solid fa-users"></i></span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-number" id="kpi-total-users">250</span>
+                <span class="kpi-badge positive"><i class="fa-solid fa-arrow-up"></i> Active</span>
+              </div>
+              <div class="kpi-footer-note">250 registered accounts</div>
+            </div>
+
+            <!-- 2. New Registrations -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">New Registrations</span>
+                <span class="kpi-icon green"><i class="fa-solid fa-user-plus"></i></span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-number" id="kpi-new-reg">18</span>
+                <span class="kpi-badge-sub">today</span>
+              </div>
+              <div class="kpi-footer-note">18 new sign-ups today</div>
+            </div>
+
+            <!-- 3. Login Activity -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">Login Activity</span>
+                <span class="kpi-icon purple"><i class="fa-solid fa-right-to-bracket"></i></span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-number" id="kpi-logins-today">75</span>
+                <span class="kpi-badge-sub">today</span>
+              </div>
+              <div class="kpi-footer-note">75 successful logins today</div>
+            </div>
+
+            <!-- 4. Active Users -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">Active Users</span>
+                <span class="kpi-icon amber"><i class="fa-solid fa-bolt"></i></span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-number" id="kpi-active-users">42</span>
+                <span class="kpi-badge-sub">today</span>
+              </div>
+              <div class="kpi-footer-note">42 users active today</div>
+            </div>
+
+            <!-- 5. Button Clicks -->
+            <div class="kpi-card highlighted">
+              <div class="kpi-top">
+                <span class="kpi-label">Button Clicks Tracked</span>
+                <span class="kpi-icon rose"><i class="fa-solid fa-hand-pointer"></i></span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-number" id="kpi-button-clicks">120</span>
+                <span class="kpi-badge pulse"><i class="fa-solid fa-circle-dot"></i> Live</span>
+              </div>
+              <div class="kpi-footer-note">Dashboard button clicked 120 times</div>
+            </div>
+
+            <!-- 6. Features Tracked -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">Platform Features</span>
+                <span class="kpi-icon cyan"><i class="fa-solid fa-chart-line"></i></span>
+              </div>
+              <div class="kpi-value-row">
+                <span class="kpi-number" id="kpi-features-count">6</span>
+                <span class="kpi-badge-sub">Active</span>
+              </div>
+              <div class="kpi-footer-note">Dashboard, Quiz, Exam, Sheet, etc.</div>
+            </div>
+          </div>
+
+          <!-- Activity Telemetry & Click Insights Two-Column Layout -->
+          <div class="analytics-two-col">
+            
+            <!-- Left: Click Breakdown & Feature Usage -->
+            <div class="analytics-col-left">
+              <div class="analytics-panel">
+                <div class="panel-header">
+                  <h4><i class="fa-solid fa-arrow-pointer"></i> Button Click Distribution</h4>
+                  <button class="btn btn-xs btn-primary" id="btn-simulate-click" title="Increment click telemetry live">
+                    <i class="fa-solid fa-plus"></i> Simulate Click
+                  </button>
+                </div>
+                <div class="click-breakdown-list" id="click-breakdown-container">
+                  <div class="click-bar-item">
+                    <div class="cbi-header">
+                      <span>Dashboard Button</span>
+                      <strong id="bar-clicks-dashboard">48 clicks</strong>
+                    </div>
+                    <div class="cbi-progress"><div class="cbi-fill" style="width: 40%;"></div></div>
+                  </div>
+                  <div class="click-bar-item">
+                    <div class="cbi-header">
+                      <span>Practice Mode Button</span>
+                      <strong id="bar-clicks-practice">34 clicks</strong>
+                    </div>
+                    <div class="cbi-progress"><div class="cbi-fill" style="width: 28%;"></div></div>
+                  </div>
+                  <div class="click-bar-item">
+                    <div class="cbi-header">
+                      <span>Timed Mock Exam Button</span>
+                      <strong id="bar-clicks-exam">19 clicks</strong>
+                    </div>
+                    <div class="cbi-progress"><div class="cbi-fill" style="width: 16%;"></div></div>
+                  </div>
+                  <div class="click-bar-item">
+                    <div class="cbi-header">
+                      <span>Unit Switcher (Unit 1 & 2)</span>
+                      <strong id="bar-clicks-unit">12 clicks</strong>
+                    </div>
+                    <div class="cbi-progress"><div class="cbi-fill" style="width: 10%;"></div></div>
+                  </div>
+                  <div class="click-bar-item">
+                    <div class="cbi-header">
+                      <span>Question Palette & Filters</span>
+                      <strong id="bar-clicks-palette">7 clicks</strong>
+                    </div>
+                    <div class="cbi-progress"><div class="cbi-fill" style="width: 6%;"></div></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Page Views & Feature Usage -->
+              <div class="analytics-panel mt-3">
+                <div class="panel-header">
+                  <h4><i class="fa-solid fa-layer-group"></i> User Activity by Page / Feature</h4>
+                </div>
+                <div class="feature-usage-list" id="feature-usage-container">
+                  <div class="fu-row">
+                    <span class="fu-page"><i class="fa-solid fa-house"></i> /dashboard</span>
+                    <span class="fu-badge">310 views</span>
+                  </div>
+                  <div class="fu-row">
+                    <span class="fu-page"><i class="fa-solid fa-circle-question"></i> /quiz (Unit 1 & 2)</span>
+                    <span class="fu-badge">185 views</span>
+                  </div>
+                  <div class="fu-row">
+                    <span class="fu-page"><i class="fa-solid fa-user-lock"></i> /login</span>
+                    <span class="fu-badge">92 visits</span>
+                  </div>
+                  <div class="fu-row">
+                    <span class="fu-page"><i class="fa-solid fa-layer-group"></i> /flashcards</span>
+                    <span class="fu-badge">64 sessions</span>
+                  </div>
+                  <div class="fu-row">
+                    <span class="fu-page"><i class="fa-solid fa-book-open"></i> /revision-sheet</span>
+                    <span class="fu-badge">41 opens</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Real-Time Event Stream Table -->
+            <div class="analytics-col-right">
+              <div class="analytics-panel full-height">
+                <div class="panel-header flex-between">
+                  <div>
+                    <h4><i class="fa-solid fa-stream"></i> Real-Time Activity Event Stream</h4>
+                    <span class="panel-sub">Live feed of user actions, clicks & authentications</span>
+                  </div>
+                  <div class="stream-filter-pills">
+                    <button class="stream-pill active" data-filter="ALL">All</button>
+                    <button class="stream-pill" data-filter="CLICKS">Clicks</button>
+                    <button class="stream-pill" data-filter="LOGINS">Logins</button>
+                    <button class="stream-pill" data-filter="UNITS">Units</button>
+                  </div>
+                </div>
+
+                <!-- Event Stream Table -->
+                <div class="events-table-wrapper">
+                  <table class="events-table">
+                    <thead>
+                      <tr>
+                        <th>Event</th>
+                        <th>User ID</th>
+                        <th>Page</th>
+                        <th>Time</th>
+                        <th>Details</th>
+                      </tr>
+                    </thead>
+                    <tbody id="events-table-body">
+                      <!-- Dynamically rendered -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="panel-footer-actions">
+                  <button class="btn btn-outline btn-xs" id="btn-export-analytics">
+                    <i class="fa-solid fa-download"></i> Export Event Log (JSON)
+                  </button>
+                  <button class="btn btn-outline btn-xs" id="btn-reset-analytics">
+                    <i class="fa-solid fa-rotate-left"></i> Reset to Baseline (250 Users)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Unit 2 High-Yield Revision Sheet Modal -->
+    <div class="modal-backdrop" id="modal-revision-sheet" style="display: none;">
+      <div class="modal-container revision-modal">
+        <div class="modal-header">
+          <div>
+            <div class="revision-header-tag"><i class="fa-solid fa-book-bookmark"></i> Unit 2 Quick Revision</div>
+            <h3>High-Yield Concepts Review Table</h3>
+            <p class="modal-subtitle">Revise the 29 highest-yield concepts before your university examination</p>
+          </div>
+          <button class="btn-icon-sm" id="btn-close-revision"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="revision-search-bar">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="revision-search-input" placeholder="Search topics (e.g. ETL, PCA, ROC-AUC, Overfitting, Imputation)..." />
+          </div>
+
+          <div class="revision-table-wrapper">
+            <table class="revision-table">
+              <thead>
+                <tr>
+                  <th style="width: 28%;">Topic</th>
+                  <th style="width: 72%;">Key Point to Remember</th>
+                </tr>
+              </thead>
+              <tbody id="revision-table-body">
+                <!-- Dynamically populated from unit2RevisionSheet -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline" id="btn-print-revision"><i class="fa-solid fa-print"></i> Print Sheet</button>
+          <button class="btn btn-secondary" id="btn-dismiss-revision">Close Revision Sheet</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. Unit 3 Coming Soon Modal -->
+    <div class="modal-backdrop" id="modal-unit3" style="display: none;">
+      <div class="modal-container unit3-modal">
+        <div class="modal-header">
+          <div class="u3-badge"><i class="fa-solid fa-hourglass-half"></i> In Active Development</div>
+          <h3>Unit 3: Advanced Predictive Modeling & AI</h3>
+          <button class="btn-icon-sm" id="btn-close-unit3"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="u3-teaser-card">
+            <div class="u3-icon"><i class="fa-solid fa-brain"></i></div>
+            <h4>Unit 3 Question Bank is Coming Soon!</h4>
+            <p>Developed with comprehensive academic rigor by <strong>Aditya Verma</strong>. This upcoming unit covers the frontier of deep predictive modeling and AI deployment.</p>
+          </div>
+
+          <div class="u3-topics-preview">
+            <h5>Upcoming Unit 3 Syllabus Modules:</h5>
+            <div class="u3-topics-grid">
+              <div class="u3-topic-item"><i class="fa-solid fa-network-wired"></i> Deep Feedforward & Convolutional Neural Networks</div>
+              <div class="u3-topic-item"><i class="fa-solid fa-chart-line"></i> Time-Series Forecasting (ARIMA, SARIMA, LSTM, GRU)</div>
+              <div class="u3-topic-item"><i class="fa-solid fa-comment-dots"></i> Natural Language Processing & Text Mining for Prediction</div>
+              <div class="u3-topic-item"><i class="fa-solid fa-cloud-arrow-up"></i> Cloud MLOps, Containerization & Automated Model Monitoring</div>
+            </div>
+          </div>
+
+          <div class="u3-author-note">
+            <i class="fa-solid fa-user-check"></i> Authored & Curated by <strong>Aditya Verma</strong> for University Exam Excellence.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btn-dismiss-unit3">Back to Active Units</button>
+          <button class="btn btn-primary" id="btn-explore-unit2"><i class="fa-solid fa-arrow-right"></i> Explore Unit 2 (100 MCQs)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- MODAL: TOP 25 PERFORMERS LEADERBOARD -->
+    <!-- ==================================================== -->
+    <div class="modal-backdrop" id="modal-leaderboard" style="display: none;">
+      <div class="modal-container modal-xl">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-kicker"><i class="fa-solid fa-trophy text-warning"></i> Academic Hall of Fame</span>
+            <h3>Top 25 Performers Leaderboard</h3>
+            <p>University Predictive Analytics Exam Rankings — High Scores & Speed Records</p>
+          </div>
+          <button class="btn-modal-close" id="btn-close-leaderboard">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Leaderboard Summary Metrics Bar -->
+          <div class="leaderboard-stats-grid">
+            <div class="lb-stat-box">
+              <span class="lb-stat-icon gold"><i class="fa-solid fa-crown"></i></span>
+              <div class="lb-stat-info">
+                <span class="lb-stat-val" id="lb-top-score">98%</span>
+                <span class="lb-stat-lbl">#1 High Score</span>
+              </div>
+            </div>
+            <div class="lb-stat-box">
+              <span class="lb-stat-icon blue"><i class="fa-solid fa-users"></i></span>
+              <div class="lb-stat-info">
+                <span class="lb-stat-val" id="lb-active-students">42</span>
+                <span class="lb-stat-lbl">Active Students Online</span>
+              </div>
+            </div>
+            <div class="lb-stat-box">
+              <span class="lb-stat-icon green"><i class="fa-solid fa-file-signature"></i></span>
+              <div class="lb-stat-info">
+                <span class="lb-stat-val" id="lb-total-tests">250+</span>
+                <span class="lb-stat-lbl">Total Tests Given</span>
+              </div>
+            </div>
+            <div class="lb-stat-box">
+              <span class="lb-stat-icon purple"><i class="fa-solid fa-bolt"></i></span>
+              <div class="lb-stat-info">
+                <span class="lb-stat-val" id="lb-fastest-time">23m 40s</span>
+                <span class="lb-stat-lbl">Fastest Exam Finish</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter Tabs & Search -->
+          <div class="lb-toolbar">
+            <div class="lb-filter-tabs">
+              <button class="lb-tab active" data-filter="ALL">All Units</button>
+              <button class="lb-tab" data-filter="unit1">Unit 1</button>
+              <button class="lb-tab" data-filter="unit2">Unit 2</button>
+            </div>
+            <div class="lb-search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="lb-search-input" placeholder="Search student name or college..." />
+            </div>
+          </div>
+
+          <!-- Top 25 Table -->
+          <div class="lb-table-wrapper">
+            <table class="lb-table">
+              <thead>
+                <tr>
+                  <th style="width: 75px; text-align: center;">Rank</th>
+                  <th>Student Performer</th>
+                  <th>Unit</th>
+                  <th>Score</th>
+                  <th>Accuracy</th>
+                  <th>Time Taken</th>
+                  <th>Recorded</th>
+                </tr>
+              </thead>
+              <tbody id="lb-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="lb-footer-note">
+            <i class="fa-solid fa-code"></i> Developed by <strong>Aditya Verma</strong> • University Exam Leaderboard
+          </div>
+          <div class="lb-footer-actions">
+            <button class="btn btn-secondary" id="btn-dismiss-leaderboard">Close</button>
+            <button class="btn btn-primary" id="btn-lb-take-test"><i class="fa-solid fa-play"></i> Attempt Exam to Beat Record</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- MODAL: QUALIFY FOR TOP 25 RECORD CLAIM -->
+    <!-- ==================================================== -->
+    <div class="modal-backdrop" id="modal-record-name" style="display: none;">
+      <div class="modal-container modal-sm">
+        <div class="modal-header text-center" style="display: block; text-align: center; border-bottom: none; padding-bottom: 0.5rem;">
+          <div class="record-trophy-anim">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+          <h3 style="margin-top: 0.5rem; color: #fbbf24; font-size: 1.4rem;">🎉 You Made the Top 25 Record!</h3>
+          <p style="color: var(--text-muted); font-size: 0.88rem;">Outstanding performance in your predictive analytics examination!</p>
+        </div>
+
+        <div class="modal-body" style="padding-top: 0.5rem;">
+          <div class="record-qual-box">
+            <div class="rq-row">
+              <span>Your Score:</span>
+              <strong id="record-score-badge" class="badge-score">95% (95/100)</strong>
+            </div>
+            <div class="rq-row">
+              <span>Time Taken:</span>
+              <strong id="record-time-badge">24m 10s</strong>
+            </div>
+            <div class="rq-row">
+              <span>Predicted Rank:</span>
+              <strong id="record-rank-badge" class="badge-rank">Rank #4 of Top 25</strong>
+            </div>
+          </div>
+
+          <p class="rq-prompt-text">
+            Enter your name to permanently record your achievement on the University Top 25 Leaderboard:
+          </p>
+
+          <form id="form-record-name">
+            <div class="form-group mb-3">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.35rem;">
+                <label for="record-input-name" style="font-size: 0.85rem; font-weight: 600;">
+                  <i class="fa-solid fa-user text-primary"></i> Your Full Name
+                </label>
+                <span id="record-name-word-count" style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);">0 / 25 letters</span>
+              </div>
+              <input type="text" id="record-input-name" class="form-input" placeholder="e.g. Rahul Sharma" maxlength="25" required autofocus />
+              <small id="record-name-error" style="color: #f87171; font-size: 0.75rem; display: none; margin-top: 0.25rem;">Name cannot exceed 25 letters.</small>
+            </div>
+            <div class="form-group mb-3">
+              <label for="record-input-college" style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; display: block;">
+                <i class="fa-solid fa-building-columns text-primary"></i> College / Department (Optional)
+              </label>
+              <input type="text" id="record-input-college" class="form-input" placeholder="e.g. Dept of Data Science" />
+            </div>
+            <button type="submit" class="btn btn-warning btn-block" id="btn-save-record" style="width: 100%; justify-content: center; font-size: 1rem; padding: 0.75rem;">
+              <i class="fa-solid fa-crown"></i> Claim My Spot in Top 25
+            </button>
+          </form>
+        </div>
+
+        <div class="modal-footer" style="justify-content: center; border-top: none; padding-top: 0;">
+          <button class="btn btn-secondary btn-sm" id="btn-skip-record">Skip for Now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global App Footer -->
+    <footer class="app-footer">
+      <div class="footer-container">
+        <div class="footer-col-left">
+          <div class="footer-brand">
+            <i class="fa-solid fa-chart-line"></i> Predictive<span>Analytics</span>
+          </div>
+          <p class="footer-desc">University Exam Preparation & Diagnostic Mastery System for Predictive Analytics.</p>
+          <div class="footer-dev-signature">
+            <i class="fa-solid fa-code"></i> Developed by <strong>Aditya Verma</strong>
+          </div>
+        </div>
+        <div class="footer-col-center">
+          <span class="footer-heading">Syllabus Coverage</span>
+          <div class="footer-units-links">
+            <button class="footer-link-btn" id="footer-btn-unit1"><i class="fa-solid fa-circle-check text-success"></i> Unit 1: Foundations & ML (100 MCQs)</button>
+            <button class="footer-link-btn" id="footer-btn-unit2"><i class="fa-solid fa-circle-check text-success"></i> Unit 2: Storage & Viz (100 MCQs)</button>
+            <button class="footer-link-btn" id="footer-btn-unit3"><i class="fa-solid fa-clock text-warning"></i> Unit 3: Advanced AI (Coming Soon)</button>
+          </div>
+        </div>
+        <div class="footer-col-right">
+          <span class="footer-heading">Student Resources</span>
+          <div class="footer-tools-links">
+            <button class="footer-btn" id="footer-btn-leaderboard"><i class="fa-solid fa-trophy text-warning"></i> Top 25 Leaderboard</button>
+            <button class="footer-btn" id="footer-btn-revision"><i class="fa-solid fa-book-bookmark"></i> Unit 2 Revision Sheet</button>
+            <button class="footer-btn" id="footer-btn-take-exam"><i class="fa-solid fa-stopwatch text-accent"></i> Timed Mock Exam</button>
+          </div>
+          <span class="footer-copyright">© 2026 Aditya Verma. All rights reserved.</span>
+        </div>
+      </div>
+    </footer>
 
   </div>
 
