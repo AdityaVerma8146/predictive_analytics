@@ -249,7 +249,7 @@ app.get('/api/questions', (req, res) => {
   // Search in question, options, tags, keyTakeaway
   if (search && search.trim() !== '') {
     const q = search.toLowerCase().trim();
-    result = result.filter(item => 
+    result = result.filter(item =>
       item.question.toLowerCase().includes(q) ||
       (item.tags && item.tags.some(t => t.toLowerCase().includes(q))) ||
       (item.keyTakeaway && item.keyTakeaway.toLowerCase().includes(q)) ||
@@ -328,14 +328,14 @@ app.get('/api/questions/:id', (req, res) => {
 
 // 6. Check a single answer (Practice Mode Instant Explanation)
 app.post('/api/check-answer', (req, res) => {
-  const { 
+  const {
     unit: reqUnit,
-    questionId, 
-    selectedAnswer, 
-    selectedOptionText, 
-    options: clientOptions, 
-    correctAnswer: clientCorrectAnswer, 
-    distractors: clientDistractors 
+    questionId,
+    selectedAnswer,
+    selectedOptionText,
+    options: clientOptions,
+    correctAnswer: clientCorrectAnswer,
+    distractors: clientDistractors
   } = req.body;
 
   if (!questionId || (!selectedAnswer && !selectedOptionText)) {
@@ -403,12 +403,12 @@ app.post('/api/check-answer', (req, res) => {
 
 // 7. Submit Full Quiz (Exam Mode Evaluation)
 app.post('/api/submit-quiz', (req, res) => {
-  const { 
+  const {
     unit: reqUnit = 'unit1',
-    answers = {}, 
-    timeSpentSeconds = 0, 
-    mode = 'exam', 
-    sectionFilter = 'ALL', 
+    answers = {},
+    timeSpentSeconds = 0,
+    mode = 'exam',
+    sectionFilter = 'ALL',
     questionIds,
     clientQuestions,
     questions: customQuestions
@@ -948,6 +948,15 @@ app.post('/api/notes', (req, res) => {
 
   userStore.notes[id] = note;
   res.json({ success: true, questionId: id, note });
+});
+
+// Local dev fallback for Vercel Web Analytics endpoints (prevents MIME type console errors on localhost)
+app.all('/_vercel/insights/*', (req, res) => {
+  if (req.path.endsWith('.js')) {
+    res.type('application/javascript').send('/* Vercel Web Analytics localhost development stub */');
+  } else {
+    res.status(204).end();
+  }
 });
 
 // Fallback to index.html for SPA routing

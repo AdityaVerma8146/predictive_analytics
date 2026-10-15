@@ -66,6 +66,17 @@ function initApp() {
     AnalyticsTracker.track('page_viewed', '/dashboard', 'User visited Predictive Analytics Mastery platform');
   }
 
+  // Track initial visit in Vercel Analytics
+  trackVercelEvent('App_Initialized', { unit: AppState.currentUnit });
+
+  // Handle direct client-side deep links or refresh on route
+  try {
+    const directRoute = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    if (['quiz', 'results', 'flashcards'].includes(directRoute)) {
+      showView(directRoute, true);
+    }
+  } catch (e) {}
+
   // Try background sync with API if server is present
   syncDataFromServer();
 }
@@ -139,9 +150,36 @@ function persistStorage() {
 }
 
 // ==========================================================================
+// 2.5 VERCEL WEB ANALYTICS CLIENT INTEGRATION
+// ==========================================================================
+/**
+ * Safe client-side wrapper for Vercel Web Analytics.
+ * Compatible with the official static HTML integration (window.va / window.vaq queue API).
+ * - Standard web analytics (unique visitors, page views, referrers, device/browser, country)
+ *   are automatically captured by /_vercel/insights/script.js once enabled in Vercel.
+ * - Custom button/interaction events are safely dispatched via window.va('event', ...).
+ *   (Note: Custom events require a Vercel Pro or Enterprise plan to be ingested in dashboard;
+ *   on the free Hobby plan, they execute cleanly without error or disruption).
+ * - Sensitive information (passwords, tokens, emails, student names) is strictly excluded.
+ */
+function trackVercelEvent(eventName, eventData) {
+  if (typeof window !== 'undefined' && typeof window.va === 'function') {
+    try {
+      if (eventData && typeof eventData === 'object') {
+        window.va('event', { name: eventName, ...eventData });
+      } else {
+        window.va('event', { name: eventName });
+      }
+    } catch (e) {
+      // Fail silently to never disrupt application execution
+    }
+  }
+}
+
+// ==========================================================================
 // 3. NAVIGATION & VIEW ROUTING
 // ==========================================================================
-function showView(viewName) {
+function showView(viewName, skipPush = false) {
   AppState.currentView = viewName;
 
   document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
@@ -150,6 +188,19 @@ function showView(viewName) {
     target.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  // Update URL via pushState so Vercel Web Analytics automatically tracks client-side navigation
+  if (!skipPush) {
+    try {
+      const routePath = viewName === 'dashboard' ? '/' : `/${viewName}`;
+      if (window.location.pathname !== routePath) {
+        window.history.pushState({ view: viewName }, '', routePath);
+      }
+    } catch (e) {}
+  }
+
+  // Record SPA Route change in Vercel Analytics
+  trackVercelEvent('View_Navigated', { view: viewName });
 
   // Update Header Mode Pill
   const modePillText = document.getElementById('nav-mode-text');
@@ -293,6 +344,13 @@ function startPracticeMode(sectionFilter = 'ALL', shuffle = false, count = null)
   AppState.isExamTimer = false;
   AppState.examSubmitted = false;
 
+  trackVercelEvent('Quiz_Started', {
+    mode: 'practice',
+    unit: AppState.currentUnit,
+    filter: sectionFilter,
+    count: list.length
+  });
+
   showView('quiz');
   renderCurrentQuestion();
   renderPalette();
@@ -327,6 +385,14 @@ function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = null, 
   AppState.isExamTimer = true;
   AppState.examSubmitted = false;
 
+  trackVercelEvent('Quiz_Started', {
+    mode: 'exam',
+    unit: AppState.currentUnit,
+    filter: sectionFilter,
+    count: list.length,
+    durationMins: effectiveDuration
+  });
+
   showView('quiz');
   renderCurrentQuestion();
   renderPalette();
@@ -334,6 +400,11 @@ function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = null, 
 }
 
 function startSectionPractice(sectionId) {
+  trackVercelEvent('Quiz_Started', {
+    mode: 'section',
+    section: sectionId,
+    unit: AppState.currentUnit
+  });
   startPracticeMode(sectionId, false);
 }
 
@@ -356,6 +427,12 @@ function startMistakesDrill() {
   AppState.timeSpentSeconds = 0;
   AppState.isExamTimer = false;
   AppState.examSubmitted = false;
+
+  trackVercelEvent('Quiz_Started', {
+    mode: 'mistakes_drill',
+    unit: AppState.currentUnit,
+    count: list.length
+  });
 
   showView('quiz');
   renderCurrentQuestion();
@@ -843,6 +920,16 @@ async function submitFullQuiz() {
   if (typeof AnalyticsTracker !== 'undefined') {
     AnalyticsTracker.track('exam_submitted', '/quiz', `Submitted ${AppState.currentUnit.toUpperCase()} (${results.correctCount}/${results.totalQuestions} - ${results.scorePercentage}%)`, 'Submit Exam Button');
   }
+
+  // Track submission in Vercel Analytics
+  trackVercelEvent('Quiz_Submitted', {
+    mode: AppState.mode,
+    unit: AppState.currentUnit,
+    scorePercentage: results.scorePercentage,
+    correctCount: results.correctCount,
+    totalQuestions: results.totalQuestions,
+    passed: results.isPassed || (results.scorePercentage >= 50)
+  });
   
   // Update mistake bank
   results.reviewList.forEach(item => {
@@ -1049,6 +1136,12 @@ function startFlashcardsMode(sectionFilter = 'ALL') {
 
   AppState.fcQuestions = prepareQuestionBatch(list, true, false);
   AppState.fcIndex = 0;
+
+  trackVercelEvent('Flashcards_Started', {
+    unit: AppState.currentUnit,
+    filter: sectionFilter,
+    count: list.length
+  });
 
   showView('flashcards');
   renderFlashcard();
