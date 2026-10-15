@@ -48,63 +48,22 @@ const authStore = {
   sessions: new Map()
 };
 
-// Analytics & Event Tracking Store matching user prompt specifications
+// Analytics & Event Tracking Store populated only by real application events
 const analyticsStore = {
   metrics: {
-    totalRegisteredUsers: 250,
-    newRegistrationsToday: 18,
-    loginsToday: 75,
-    activeUsersToday: 42,
-    totalButtonClicks: 120,
-    clicksBreakdown: {
-      'Dashboard Button': 48,
-      'Practice Mode Button': 34,
-      'Exam Mode Button': 19,
-      'Unit Switcher': 12,
-      'Question Palette': 7
-    },
-    pageViews: {
-      '/dashboard': 310,
-      '/quiz': 185,
-      '/login': 92,
-      '/flashcards': 64,
-      '/revision-sheet': 41,
-      '/admin': 28
-    }
+    totalRegisteredUsers: 0,
+    newRegistrationsToday: 0,
+    loginsToday: 0,
+    activeUsersToday: 0,
+    totalButtonClicks: 0,
+    clicksBreakdown: {},
+    pageViews: {}
   },
-  events: [
-    { id: 'EVT-001', event: 'login_success', userId: 'U101', userName: 'Aditya Verma', page: '/login', time: '09:10:00', details: 'Successful admin login session' },
-    { id: 'EVT-002', event: 'button_clicked', userId: 'U101', userName: 'Aditya Verma', page: '/dashboard', time: '09:12:30', details: 'Dashboard button clicked' },
-    { id: 'EVT-003', event: 'page_viewed', userId: 'U102', userName: 'Priya Sharma', page: '/home', time: '09:14:15', details: 'Navigated to Dashboard view' },
-    { id: 'EVT-004', event: 'unit_switched', userId: 'U101', userName: 'Aditya Verma', page: '/dashboard', time: '09:16:00', details: 'Switched syllabus to Unit 2 (100 MCQs)' },
-    { id: 'EVT-005', event: 'button_clicked', userId: 'U103', userName: 'Rohan Gupta', page: '/quiz', time: '09:18:45', details: 'Practice Mode started for Unit 2' },
-    { id: 'EVT-006', event: 'button_clicked', userId: 'U101', userName: 'Aditya Verma', page: '/dashboard', time: '09:20:10', details: 'Dashboard button clicked (Total: 120)' }
-  ]
+  events: []
 };
 
-// University Top 25 Performers Leaderboard Store
-const leaderboardStore = [
-  { id: 'LB-01', rank: 1, name: 'Priya Sharma', college: 'Dept of Data Science', unit: 'Unit 2', scorePercentage: 98, correctCount: 98, totalQuestions: 100, timeSpentSeconds: 1420, formattedTime: '23m 40s', date: 'Today, 08:45 AM' },
-  { id: 'LB-02', rank: 2, name: 'Rohan Gupta', college: 'Computer Engineering', unit: 'Unit 1', scorePercentage: 97, correctCount: 97, totalQuestions: 100, timeSpentSeconds: 1512, formattedTime: '25m 12s', date: 'Today, 07:30 AM' },
-  { id: 'LB-03', rank: 3, name: 'Ananya Patel', college: 'School of AI & ML', unit: 'Unit 2', scorePercentage: 96, correctCount: 96, totalQuestions: 100, timeSpentSeconds: 1590, formattedTime: '26m 30s', date: 'Yesterday' },
-  { id: 'LB-04', rank: 4, name: 'Devansh Mehta', college: 'Information Technology', unit: 'Unit 1', scorePercentage: 95, correctCount: 95, totalQuestions: 100, timeSpentSeconds: 1625, formattedTime: '27m 05s', date: 'Yesterday' },
-  { id: 'LB-05', rank: 5, name: 'Kavita Nair', college: 'Statistics & Analytics', unit: 'Unit 2', scorePercentage: 94, correctCount: 94, totalQuestions: 100, timeSpentSeconds: 1695, formattedTime: '28m 15s', date: '2 days ago' },
-  { id: 'LB-06', rank: 6, name: 'Siddharth Rao', college: 'Computer Science', unit: 'Unit 1', scorePercentage: 93, correctCount: 93, totalQuestions: 100, timeSpentSeconds: 1750, formattedTime: '29m 10s', date: '2 days ago' },
-  { id: 'LB-07', rank: 7, name: 'Sneha Kulkarni', college: 'Data Science & Engg', unit: 'Unit 2', scorePercentage: 92, correctCount: 92, totalQuestions: 100, timeSpentSeconds: 1785, formattedTime: '29m 45s', date: '3 days ago' },
-  { id: 'LB-08', rank: 8, name: 'Aarav Joshi', college: 'AI & Data Systems', unit: 'Unit 1', scorePercentage: 91, correctCount: 91, totalQuestions: 100, timeSpentSeconds: 1820, formattedTime: '30m 20s', date: '3 days ago' },
-  { id: 'LB-09', rank: 9, name: 'Ritu Deshmukh', college: 'Dept of Analytics', unit: 'Unit 2', scorePercentage: 90, correctCount: 90, totalQuestions: 100, timeSpentSeconds: 1875, formattedTime: '31m 15s', date: '3 days ago' },
-  { id: 'LB-10', rank: 10, name: 'Vikram Malhotra', college: 'Computational Engg', unit: 'Unit 1', scorePercentage: 89, correctCount: 89, totalQuestions: 100, timeSpentSeconds: 1920, formattedTime: '32m 00s', date: '4 days ago' },
-  { id: 'LB-11', rank: 11, name: 'Tanvi Agarwal', college: 'Information Science', unit: 'Unit 2', scorePercentage: 88, correctCount: 88, totalQuestions: 100, timeSpentSeconds: 1960, formattedTime: '32m 40s', date: '4 days ago' },
-  { id: 'LB-12', rank: 12, name: 'Yashvardhan Singh', college: 'Mathematics & Stats', unit: 'Unit 1', scorePercentage: 87, correctCount: 87, totalQuestions: 100, timeSpentSeconds: 1990, formattedTime: '33m 10s', date: '5 days ago' },
-  { id: 'LB-13', rank: 13, name: 'Meera Nambiar', college: 'Dept of AI', unit: 'Unit 2', scorePercentage: 86, correctCount: 86, totalQuestions: 100, timeSpentSeconds: 2045, formattedTime: '34m 05s', date: '5 days ago' },
-  { id: 'LB-14', rank: 14, name: 'Karan Chopra', college: 'Software Systems', unit: 'Unit 1', scorePercentage: 85, correctCount: 85, totalQuestions: 100, timeSpentSeconds: 2090, formattedTime: '34m 50s', date: '6 days ago' },
-  { id: 'LB-15', rank: 15, name: 'Ishaan Bhatia', college: 'Data Analytics Dept', unit: 'Unit 2', scorePercentage: 84, correctCount: 84, totalQuestions: 100, timeSpentSeconds: 2120, formattedTime: '35m 20s', date: '6 days ago' },
-  { id: 'LB-16', rank: 16, name: 'Pooja Sundaram', college: 'Computer Science', unit: 'Unit 1', scorePercentage: 83, correctCount: 83, totalQuestions: 100, timeSpentSeconds: 2160, formattedTime: '36m 00s', date: '1 week ago' },
-  { id: 'LB-17', rank: 17, name: 'Nihal Sen', college: 'Machine Learning Lab', unit: 'Unit 2', scorePercentage: 82, correctCount: 82, totalQuestions: 100, timeSpentSeconds: 2205, formattedTime: '36m 45s', date: '1 week ago' },
-  { id: 'LB-18', rank: 18, name: 'Diya Sen', college: 'Information Tech', unit: 'Unit 1', scorePercentage: 81, correctCount: 81, totalQuestions: 100, timeSpentSeconds: 2235, formattedTime: '37m 15s', date: '1 week ago' },
-  { id: 'LB-19', rank: 19, name: 'Arjun Reddy', college: 'Data Science Dept', unit: 'Unit 2', scorePercentage: 80, correctCount: 80, totalQuestions: 100, timeSpentSeconds: 2280, formattedTime: '38m 00s', date: '1 week ago' },
-  { id: 'LB-20', rank: 20, name: 'Shalini Verma', college: 'School of Computing', unit: 'Unit 1', scorePercentage: 79, correctCount: 79, totalQuestions: 100, timeSpentSeconds: 2320, formattedTime: '38m 40s', date: '1 week ago' }
-];
+// Leaderboard records are added only when a learner shares an exam result.
+const leaderboardStore = [];
 
 // ----------------------------------------------------
 // HELPERS
@@ -811,14 +770,17 @@ app.get('/api/analytics/dashboard', (req, res) => {
   });
 });
 
-// Reset / Seed Demo Analytics
+// Reset analytics counters and event history
 app.post('/api/analytics/reset', (req, res) => {
-  analyticsStore.metrics.totalRegisteredUsers = 250;
-  analyticsStore.metrics.newRegistrationsToday = 18;
-  analyticsStore.metrics.loginsToday = 75;
-  analyticsStore.metrics.activeUsersToday = 42;
-  analyticsStore.metrics.totalButtonClicks = 120;
-  res.json({ success: true, message: 'Analytics metrics reset to baseline defaults.' });
+  analyticsStore.metrics.totalRegisteredUsers = authStore.users.length;
+  analyticsStore.metrics.newRegistrationsToday = 0;
+  analyticsStore.metrics.loginsToday = 0;
+  analyticsStore.metrics.activeUsersToday = 0;
+  analyticsStore.metrics.totalButtonClicks = 0;
+  analyticsStore.metrics.clicksBreakdown = {};
+  analyticsStore.metrics.pageViews = {};
+  analyticsStore.events = [];
+  res.json({ success: true, message: 'Analytics metrics and event history cleared.' });
 });
 
 // ----------------------------------------------------
@@ -836,9 +798,7 @@ app.get('/api/leaderboard', (req, res) => {
   res.json({
     success: true,
     count: list.length,
-    activeStudents: analyticsStore.metrics.activeUsersToday,
-    testsTaken: analyticsStore.metrics.totalRegisteredUsers,
-    topScore: list.length > 0 ? list[0].scorePercentage : 98,
+    topScore: list.length > 0 ? list[0].scorePercentage : null,
     leaderboard: list.slice(0, 25)
   });
 });

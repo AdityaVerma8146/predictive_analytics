@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Predictive Analytics Mastery — 100 MCQs Interactive Quiz</title>
-  <meta name="description" content="Master Unit-1 Predictive Analytics with 100 interactive MCQs, instant wrong attempt explanations, formula breakdowns, and diagnostic exam analytics." />
+  <title>Predictive Analytics | Interactive Quiz</title>
+  <meta name="description" content="Study Predictive Analytics with unit-based question banks, interactive practice, timed exams, and performance review." />
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -42,24 +42,9 @@
             <span class="brand-subtitle" id="nav-brand-subtitle">Unit-1 • 100 MCQs</span>
           </div>
         </div>
-        <div class="nav-developer-badge" title="Platform Creator & Developer">
-          <i class="fa-solid fa-code"></i> Developed by <strong>Aditya Verma</strong>
-        </div>
       </div>
 
       <div class="nav-center">
-        <!-- Live Student Activity Indicators -->
-        <div class="nav-student-stats" id="nav-student-stats">
-          <div class="nav-stat-pill active-students-pill" title="Students currently practicing online">
-            <span class="live-pulse-dot"></span>
-            <span class="stat-pill-label"><strong id="nav-active-count">42</strong> Active Students</span>
-          </div>
-          <div class="nav-stat-pill tests-taken-pill" title="Total exam tests attempted by students">
-            <i class="fa-solid fa-clipboard-check text-accent"></i>
-            <span class="stat-pill-label"><strong id="nav-tests-taken-count">250+</strong> Tests Given</span>
-          </div>
-        </div>
-
         <!-- Live Quiz Score Stats (shown while in quiz mode) -->
         <div class="live-stats" id="nav-live-stats" style="display: none;">
           <span class="stat-item" title="Current Score"><i class="fa-solid fa-check-circle stat-icon-correct"></i> <span id="stat-correct-count">0</span></span>
@@ -69,11 +54,9 @@
       </div>
 
       <div class="nav-right">
-        <!-- Top 25 Performers Leaderboard Button -->
-        <button class="btn-top25-leaderboard" id="btn-open-leaderboard" title="View University Top 25 Performers Leaderboard">
-          <i class="fa-solid fa-trophy"></i>
-          <span>Top 25 Performers</span>
-          <span class="top25-badge-dot"></span>
+        <button class="btn-top25-leaderboard" id="btn-open-leaderboard" title="View shared quiz results">
+          <i class="fa-solid fa-ranking-star"></i>
+          <span>Leaderboard</span>
         </button>
 
         <button class="nav-icon-btn" id="btn-search-toggle" title="Search 100 MCQs (Press /)">
@@ -203,20 +186,6 @@
               <span class="h-stat-label">Mistakes to Fix</span>
             </div>
           </div>
-        </div>
-
-        <!-- Top 25 Performers Teaser Strip -->
-        <div class="leaderboard-teaser-banner" id="banner-leaderboard-teaser">
-          <div class="ltb-left">
-            <div class="ltb-icon"><i class="fa-solid fa-trophy"></i></div>
-            <div class="ltb-text">
-              <h4>University Hall of Fame — Top 25 Performers</h4>
-              <p>Top score: <strong>98% (Priya Sharma)</strong> • <span class="live-pulse-dot inline"></span> <strong>42 active students</strong> competing. Can you make the record?</p>
-            </div>
-          </div>
-          <button class="btn btn-warning btn-sm" id="btn-dash-open-leaderboard">
-            <i class="fa-solid fa-ranking-star"></i> View Top 25 Leaderboard
-          </button>
         </div>
 
         <!-- Mode Selection Grid -->
@@ -1198,48 +1167,41 @@ Step 2: Upper Boundary = Q3 + 1.5(IQR) = 30 + 30 = 60
     </div>
 
     <!-- ==================================================== -->
-    <!-- MODAL: TOP 25 PERFORMERS LEADERBOARD -->
+    <!-- MODAL: SHARED QUIZ RESULTS -->
     <!-- ==================================================== -->
     <div class="modal-backdrop" id="modal-leaderboard" style="display: none;">
       <div class="modal-container modal-xl">
         <div class="modal-header">
           <div class="modal-title-group">
-            <span class="modal-kicker"><i class="fa-solid fa-trophy text-warning"></i> Academic Hall of Fame</span>
-            <h3>Top 25 Performers Leaderboard</h3>
-            <p>University Predictive Analytics Exam Rankings — High Scores & Speed Records</p>
+            <span class="modal-kicker"><i class="fa-solid fa-ranking-star text-warning"></i> Shared Results</span>
+            <h3>Quiz Leaderboard</h3>
+            <p>Scores appear here when learners choose to share their exam results.</p>
           </div>
           <button class="btn-modal-close" id="btn-close-leaderboard">&times;</button>
         </div>
 
         <div class="modal-body">
-          <!-- Leaderboard Summary Metrics Bar -->
+          <!-- Summary metrics reflect recorded results only -->
           <div class="leaderboard-stats-grid">
             <div class="lb-stat-box">
               <span class="lb-stat-icon gold"><i class="fa-solid fa-crown"></i></span>
               <div class="lb-stat-info">
-                <span class="lb-stat-val" id="lb-top-score">98%</span>
-                <span class="lb-stat-lbl">#1 High Score</span>
+                <span class="lb-stat-val" id="lb-top-score">—</span>
+                <span class="lb-stat-lbl">Top Score</span>
               </div>
             </div>
             <div class="lb-stat-box">
-              <span class="lb-stat-icon blue"><i class="fa-solid fa-users"></i></span>
+              <span class="lb-stat-icon blue"><i class="fa-solid fa-clipboard-check"></i></span>
               <div class="lb-stat-info">
-                <span class="lb-stat-val" id="lb-active-students">42</span>
-                <span class="lb-stat-lbl">Active Students Online</span>
+                <span class="lb-stat-val" id="lb-total-records">0</span>
+                <span class="lb-stat-lbl">Recorded Results</span>
               </div>
             </div>
             <div class="lb-stat-box">
-              <span class="lb-stat-icon green"><i class="fa-solid fa-file-signature"></i></span>
+              <span class="lb-stat-icon green"><i class="fa-regular fa-clock"></i></span>
               <div class="lb-stat-info">
-                <span class="lb-stat-val" id="lb-total-tests">250+</span>
-                <span class="lb-stat-lbl">Total Tests Given</span>
-              </div>
-            </div>
-            <div class="lb-stat-box">
-              <span class="lb-stat-icon purple"><i class="fa-solid fa-bolt"></i></span>
-              <div class="lb-stat-info">
-                <span class="lb-stat-val" id="lb-fastest-time">23m 40s</span>
-                <span class="lb-stat-lbl">Fastest Exam Finish</span>
+                <span class="lb-stat-val" id="lb-fastest-time">—</span>
+                <span class="lb-stat-lbl">Fastest Result</span>
               </div>
             </div>
           </div>
@@ -1280,11 +1242,11 @@ Step 2: Upper Boundary = Q3 + 1.5(IQR) = 30 + 30 = 60
 
         <div class="modal-footer">
           <div class="lb-footer-note">
-            <i class="fa-solid fa-code"></i> Developed by <strong>Aditya Verma</strong> • University Exam Leaderboard
+            <i class="fa-solid fa-shield-halved"></i> Only shared quiz results are displayed
           </div>
           <div class="lb-footer-actions">
             <button class="btn btn-secondary" id="btn-dismiss-leaderboard">Close</button>
-            <button class="btn btn-primary" id="btn-lb-take-test"><i class="fa-solid fa-play"></i> Attempt Exam to Beat Record</button>
+            <button class="btn btn-primary" id="btn-lb-take-test"><i class="fa-solid fa-play"></i> Take an Exam</button>
           </div>
         </div>
       </div>
@@ -1375,7 +1337,7 @@ Step 2: Upper Boundary = Q3 + 1.5(IQR) = 30 + 30 = 60
         <div class="footer-col-right">
           <span class="footer-heading">Student Resources</span>
           <div class="footer-tools-links">
-            <button class="footer-btn" id="footer-btn-leaderboard"><i class="fa-solid fa-trophy text-warning"></i> Top 25 Leaderboard</button>
+            <button class="footer-btn" id="footer-btn-leaderboard"><i class="fa-solid fa-ranking-star text-warning"></i> Quiz Leaderboard</button>
             <button class="footer-btn" id="footer-btn-revision"><i class="fa-solid fa-book-bookmark"></i> Unit 2 Revision Sheet</button>
             <button class="footer-btn" id="footer-btn-take-exam"><i class="fa-solid fa-stopwatch text-accent"></i> Timed Mock Exam</button>
           </div>

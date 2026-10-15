@@ -1,6 +1,6 @@
-# 🔥 Unit-1 Predictive Analytics — 100 MCQs Full-Stack Quiz Application
+# Predictive Analytics — Interactive Quiz Application
 
-A full-fledged interactive web application built with **Node.js, Express, and Vanilla JavaScript/CSS** to master **Unit-1 Predictive Analysis (100 MCQs)**. Features instant misconception breakdowns on wrong attempts, step-by-step mathematical solutions, timed exam simulation, question palette grid, 3D flashcards, weakness drill revision bank, sound effects synthesizer, and diagnostic analytics.
+An interactive web application built with **Node.js, Express, and Vanilla JavaScript/CSS** for studying Predictive Analytics. Unit 1 and Unit 2 each provide a 100-question bank; questions are shared between the server API and the generated browser bundle so the quiz also works on static deployments. The app includes practice explanations, timed exams, section review, flashcards, bookmarks, and diagnostic results.
 
 ---
 
@@ -19,7 +19,7 @@ A full-fledged interactive web application built with **Node.js, Express, and Va
 - Comprehensive diagnostic scorecard with Grade (A+, A, B, C, D, F), Accuracy %, Time spent, and Avg speed per question.
 
 ### 3. 🎯 Section-by-Section Mastery
-Master individual units from the 8 sections of Predictive Analytics:
+Choose Unit 1 or Unit 2 and practice individual syllabus sections. Unit 1 covers:
 - **Section A**: Introduction to Predictive Analysis (Q1 - Q15)
 - **Section B**: Data Cleaning and Preprocessing (Q16 - Q30)
 - **Section C**: Feature Scaling, Encoding & Feature Engineering (Q31 - Q45)
@@ -28,6 +28,8 @@ Master individual units from the 8 sections of Predictive Analytics:
 - **Section F**: Supervised Learning & Algorithms (Q67 - Q85)
 - **Section G**: Random Forest & Gradient Boosting (Q86 - Q90)
 - **Section H**: Model Evaluation & Confusion Matrix (Q91 - Q100)
+
+Unit 2 covers data storage and warehousing, feature engineering, visualization, evaluation, and ethics across four sections. Its 100 questions and revision sheet are sourced from `server/data/unit2.js`.
 
 ### 4. 🎴 3D Flippable Flashcards Revision
 - Test conceptual recall with 3D card flipping animations.
@@ -92,7 +94,8 @@ node server/test_full_suite.js
 ```
 ├── server/
 │   ├── data/
-│   │   └── questions.js      # Complete 100 MCQs dataset with rich explanations & formulas
+│   │   ├── questions.js      # Unit 1 question bank
+│   │   └── unit2.js          # Unit 2 question bank and revision sheet
 │   ├── server.js             # Express REST API backend server
 │   ├── test_api.js           # Question structure and data integrity test
 │   └── test_full_suite.js    # Comprehensive full-stack integration test suite
@@ -102,7 +105,8 @@ node server/test_full_suite.js
 │   │   └── styles.css        # Glassmorphic responsive dark/light styling system
 │   └── js/
 │       ├── audio.js          # Web Audio API sound synthesizer
-│       └── app.js            # Frontend state machine and interactive engine
+│       ├── app.js            # Frontend state machine and interactive engine
+│       └── questions-data.js # Generated browser bundle for static deployments
 ├── package.json
 └── README.md
 ```

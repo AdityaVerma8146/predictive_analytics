@@ -89,11 +89,12 @@ if (document.readyState === 'loading') {
 
 // Background sync with API (optional enhancement)
 async function syncDataFromServer() {
+  const unitKey = AppState.currentUnit;
   try {
-    const secRes = await fetch('/api/sections');
+    const secRes = await fetch(`/api/sections?unit=${unitKey}`);
     if (secRes.ok) {
       const data = await secRes.json();
-      if (data.success && Array.isArray(data.sections) && data.sections.length > 0) {
+      if (data.success && data.unit === AppState.currentUnit && Array.isArray(data.sections) && data.sections.length > 0) {
         AppState.sections = data.sections;
         renderSectionCards();
       }
@@ -104,10 +105,10 @@ async function syncDataFromServer() {
   }
 
   try {
-    const qRes = await fetch('/api/questions?includeAnswers=true');
+    const qRes = await fetch(`/api/questions?unit=${unitKey}&includeAnswers=true`);
     if (qRes.ok) {
       const data = await qRes.json();
-      if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
+      if (data.success && data.unit === AppState.currentUnit && Array.isArray(data.questions) && data.questions.length > 0) {
         AppState.allQuestions = data.questions;
       }
     }
@@ -319,7 +320,26 @@ function prepareQuestionBatch(questions, shuffleOptions = true, shuffleQuestions
 // 5. QUIZ MODE LAUNCHERS
 // ==========================================================================
 
+function loadActiveUnitData() {
+  const dataBundle = window.PREDICTIVE_ANALYTICS_DATA;
+  const unitData = dataBundle && typeof dataBundle.getUnitData === 'function'
+    ? dataBundle.getUnitData(AppState.currentUnit)
+    : (dataBundle && dataBundle.units ? dataBundle.units[AppState.currentUnit] : null);
+
+  if (!unitData || unitData.id !== AppState.currentUnit ||
+      !Array.isArray(unitData.questions) || unitData.questions.length === 0 ||
+      !Array.isArray(unitData.sections)) {
+    console.error(`Question data is unavailable for ${AppState.currentUnit}.`);
+    return false;
+  }
+
+  AppState.allQuestions = [...unitData.questions];
+  AppState.sections = [...unitData.sections];
+  return true;
+}
+
 function startPracticeMode(sectionFilter = 'ALL', shuffle = false, count = null) {
+  if (!loadActiveUnitData()) return;
   AppState.mode = 'practice';
   AppState.activeSectionFilter = sectionFilter;
   let list = [...AppState.allQuestions];
@@ -358,6 +378,7 @@ function startPracticeMode(sectionFilter = 'ALL', shuffle = false, count = null)
 }
 
 function startExamMode(sectionFilter = 'ALL', count = 100, durationMins = null, shuffle = true) {
+  if (!loadActiveUnitData()) return;
   AppState.mode = 'exam';
   AppState.activeSectionFilter = sectionFilter;
   let list = [...AppState.allQuestions];
@@ -409,6 +430,7 @@ function startSectionPractice(sectionId) {
 }
 
 function startMistakesDrill() {
+  if (!loadActiveUnitData()) return;
   const mistakeIds = Array.from(AppState.mistakeQuestionIds);
   if (mistakeIds.length === 0) {
     alert('🎉 Great job! You have zero mistakes recorded. Complete some practice questions first.');
@@ -454,7 +476,7 @@ function renderCurrentQuestion() {
   const sec = AppState.sections.find(s => s.id === q.sectionId);
   const secBadge = document.getElementById('quiz-section-badge');
   const secTitle = document.getElementById('quiz-section-title');
-  if (secTitle) secTitle.textContent = q.sectionTitle || `Section ${q.sectionId}`;
+  if (secTitle) secTitle.textContent = `Unit ${AppState.currentUnit === 'unit2' ? '2' : '1'} • ${q.sectionTitle || `Section ${q.sectionId}`}`;
   if (secBadge && sec) {
     const dot = secBadge.querySelector('.sec-badge-dot');
     if (dot) dot.style.backgroundColor = sec.color;
@@ -1128,6 +1150,7 @@ function toggleReviewDeepDive(id) {
 // 9. FLASHCARD ENGINE (3D Flip)
 // ==========================================================================
 function startFlashcardsMode(sectionFilter = 'ALL') {
+  if (!loadActiveUnitData()) return;
   AppState.mode = 'flashcards';
   let list = [...AppState.allQuestions];
   if (sectionFilter !== 'ALL') {
@@ -1469,17 +1492,22 @@ function switchUnit(unitKey) {
 
   if (unitKey !== 'unit1' && unitKey !== 'unit2') return;
 
-  AppState.currentUnit = unitKey;
+  const dataBundle = window.PREDICTIVE_ANALYTICS_DATA;
+  const unitData = dataBundle && typeof dataBundle.getUnitData === 'function'
+    ? dataBundle.getUnitData(unitKey)
+    : (dataBundle && dataBundle.units ? dataBundle.units[unitKey] : null);
 
-  // Retrieve unit data from window.PREDICTIVE_ANALYTICS_DATA_UNITS
-  const unitData = (window.PREDICTIVE_ANALYTICS_DATA_UNITS && window.PREDICTIVE_ANALYTICS_DATA_UNITS[unitKey]) 
-    ? window.PREDICTIVE_ANALYTICS_DATA_UNITS[unitKey] 
-    : null;
-
-  if (unitData) {
-    AppState.allQuestions = [...unitData.questions];
-    AppState.sections = [...unitData.sections];
+  if (!unitData || !Array.isArray(unitData.questions) || !Array.isArray(unitData.sections) || unitData.questions.length === 0) {
+    console.error(`Question data is unavailable for ${unitKey}.`);
+    return;
   }
+
+  if (dataBundle && typeof dataBundle.setUnit === 'function') {
+    dataBundle.setUnit(unitKey);
+  }
+  AppState.currentUnit = unitKey;
+  AppState.allQuestions = [...unitData.questions];
+  AppState.sections = [...unitData.sections];
 
   // Update UI Unit Cards active status
   document.querySelectorAll('.unit-nav-card').forEach(card => card.classList.remove('active'));
@@ -1548,7 +1576,7 @@ async function syncUnitDataFromServer(unitKey) {
     const secRes = await fetch(`/api/sections?unit=${unitKey}`);
     if (secRes.ok) {
       const data = await secRes.json();
-      if (data.success && Array.isArray(data.sections) && data.sections.length > 0) {
+      if (data.success && data.unit === AppState.currentUnit && Array.isArray(data.sections) && data.sections.length > 0) {
         AppState.sections = data.sections;
         renderSectionCards();
         updateCustomBuilderSections();
@@ -1560,7 +1588,7 @@ async function syncUnitDataFromServer(unitKey) {
     const qRes = await fetch(`/api/questions?unit=${unitKey}&includeAnswers=true`);
     if (qRes.ok) {
       const data = await qRes.json();
-      if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
+      if (data.success && data.unit === AppState.currentUnit && Array.isArray(data.questions) && data.questions.length > 0) {
         AppState.allQuestions = data.questions;
         renderDashboard();
       }
@@ -1586,8 +1614,9 @@ function renderRevisionSheet(filterText = '') {
   const tbody = document.getElementById('revision-table-body');
   if (!tbody) return;
 
-  const unit2Data = (window.PREDICTIVE_ANALYTICS_DATA_UNITS && window.PREDICTIVE_ANALYTICS_DATA_UNITS.unit2) 
-    ? window.PREDICTIVE_ANALYTICS_DATA_UNITS.unit2.revisionSheet 
+  const unit2Data = window.PREDICTIVE_ANALYTICS_DATA &&
+    typeof window.PREDICTIVE_ANALYTICS_DATA.getUnitData === 'function'
+    ? (window.PREDICTIVE_ANALYTICS_DATA.getUnitData('unit2').revisionSheet || [])
     : [];
 
   const filter = (filterText || '').trim().toLowerCase();
@@ -1782,18 +1811,12 @@ const AuthManager = {
 // ==========================================================================
 const AnalyticsTracker = {
   stats: {
-    totalUsers: 250,
-    newRegistrations: 18,
-    loginsToday: 75,
-    activeUsers: 42,
-    buttonClicks: 120,
-    events: [
-      { id: 1, event: 'login_success', userId: 'U101', page: '/login', time: '09:10', details: 'Successful credential authentication' },
-      { id: 2, event: 'button_clicked', userId: 'U101', page: '/dashboard', time: '09:12', details: 'Dashboard button clicked' },
-      { id: 3, event: 'page_viewed', userId: 'U102', page: '/home', time: '09:14', details: 'Home view rendered' },
-      { id: 4, event: 'button_clicked', userId: 'U101', page: '/dashboard', time: '09:15', details: 'Dashboard button clicked 120 times' },
-      { id: 5, event: 'user_registered', userId: 'U103', page: '/register', time: '09:18', details: '18 new registrations logged today' }
-    ]
+    totalUsers: 0,
+    newRegistrations: 0,
+    loginsToday: 0,
+    activeUsers: 0,
+    buttonClicks: 0,
+    events: []
   },
 
   init() {
@@ -1811,17 +1834,18 @@ const AnalyticsTracker = {
     try {
       const res = await fetch('/api/analytics/dashboard');
       if (res.ok) {
+        const data = await res.json();
         const metrics = data.metrics || data.analytics;
         if (data.success && metrics) {
           this.stats = {
-            totalUsers: metrics.totalRegisteredUsers || this.stats.totalUsers,
-            newRegistrations: metrics.newRegistrationsToday || this.stats.newRegistrations,
-            loginsToday: metrics.loginsToday || metrics.loginActivityToday || this.stats.loginsToday,
-            activeUsers: metrics.activeUsersToday || this.stats.activeUsers,
-            buttonClicks: metrics.totalButtonClicks || metrics.buttonClicks || this.stats.buttonClicks,
-            events: Array.isArray(data.recentEvents) && data.recentEvents.length > 0
+            totalUsers: metrics.totalRegisteredUsers ?? 0,
+            newRegistrations: metrics.newRegistrationsToday ?? 0,
+            loginsToday: metrics.loginsToday ?? metrics.loginActivityToday ?? 0,
+            activeUsers: metrics.activeUsersToday ?? 0,
+            buttonClicks: metrics.totalButtonClicks ?? metrics.buttonClicks ?? 0,
+            events: Array.isArray(data.recentEvents)
               ? data.recentEvents
-              : (Array.isArray(metrics.events) ? metrics.events : this.stats.events)
+              : (Array.isArray(metrics.events) ? metrics.events : [])
           };
           this.persist();
         }
@@ -1889,18 +1913,12 @@ const AnalyticsTracker = {
 
   async reset() {
     this.stats = {
-      totalUsers: 250,
-      newRegistrations: 18,
-      loginsToday: 75,
-      activeUsers: 42,
-      buttonClicks: 120,
-      events: [
-        { id: 1, event: 'login_success', userId: 'U101', page: '/login', time: '09:10', details: 'Successful credential authentication' },
-        { id: 2, event: 'button_clicked', userId: 'U101', page: '/dashboard', time: '09:12', details: 'Dashboard button clicked' },
-        { id: 3, event: 'page_viewed', userId: 'U102', page: '/home', time: '09:14', details: 'Home view rendered' },
-        { id: 4, event: 'button_clicked', userId: 'U101', page: '/dashboard', time: '09:15', details: 'Dashboard button clicked 120 times' },
-        { id: 5, event: 'user_registered', userId: 'U103', page: '/register', time: '09:18', details: '18 new registrations logged today' }
-      ]
+      totalUsers: 0,
+      newRegistrations: 0,
+      loginsToday: 0,
+      activeUsers: 0,
+      buttonClicks: 0,
+      events: []
     };
     this.persist();
     try {
@@ -1957,28 +1975,7 @@ const AnalyticsTracker = {
 // 13.8 UNIVERSITY TOP 25 PERFORMERS LEADERBOARD ENGINE
 // ==========================================================================
 const LeaderboardManager = {
-  data: [
-    { id: 'LB-01', rank: 1, name: 'Priya Sharma', college: 'Dept of Data Science', unit: 'Unit 2', scorePercentage: 98, correctCount: 98, totalQuestions: 100, timeSpentSeconds: 1420, formattedTime: '23m 40s', date: 'Today, 08:45 AM' },
-    { id: 'LB-02', rank: 2, name: 'Rohan Gupta', college: 'Computer Engineering', unit: 'Unit 1', scorePercentage: 97, correctCount: 97, totalQuestions: 100, timeSpentSeconds: 1512, formattedTime: '25m 12s', date: 'Today, 07:30 AM' },
-    { id: 'LB-03', rank: 3, name: 'Ananya Patel', college: 'School of AI & ML', unit: 'Unit 2', scorePercentage: 96, correctCount: 96, totalQuestions: 100, timeSpentSeconds: 1590, formattedTime: '26m 30s', date: 'Yesterday' },
-    { id: 'LB-04', rank: 4, name: 'Devansh Mehta', college: 'Information Technology', unit: 'Unit 1', scorePercentage: 95, correctCount: 95, totalQuestions: 100, timeSpentSeconds: 1625, formattedTime: '27m 05s', date: 'Yesterday' },
-    { id: 'LB-05', rank: 5, name: 'Kavita Nair', college: 'Statistics & Analytics', unit: 'Unit 2', scorePercentage: 94, correctCount: 94, totalQuestions: 100, timeSpentSeconds: 1695, formattedTime: '28m 15s', date: '2 days ago' },
-    { id: 'LB-06', rank: 6, name: 'Siddharth Rao', college: 'Computer Science', unit: 'Unit 1', scorePercentage: 93, correctCount: 93, totalQuestions: 100, timeSpentSeconds: 1750, formattedTime: '29m 10s', date: '2 days ago' },
-    { id: 'LB-07', rank: 7, name: 'Sneha Kulkarni', college: 'Data Science & Engg', unit: 'Unit 2', scorePercentage: 92, correctCount: 92, totalQuestions: 100, timeSpentSeconds: 1785, formattedTime: '29m 45s', date: '3 days ago' },
-    { id: 'LB-08', rank: 8, name: 'Aarav Joshi', college: 'AI & Data Systems', unit: 'Unit 1', scorePercentage: 91, correctCount: 91, totalQuestions: 100, timeSpentSeconds: 1820, formattedTime: '30m 20s', date: '3 days ago' },
-    { id: 'LB-09', rank: 9, name: 'Ritu Deshmukh', college: 'Dept of Analytics', unit: 'Unit 2', scorePercentage: 90, correctCount: 90, totalQuestions: 100, timeSpentSeconds: 1875, formattedTime: '31m 15s', date: '3 days ago' },
-    { id: 'LB-10', rank: 10, name: 'Vikram Malhotra', college: 'Computational Engg', unit: 'Unit 1', scorePercentage: 89, correctCount: 89, totalQuestions: 100, timeSpentSeconds: 1920, formattedTime: '32m 00s', date: '4 days ago' },
-    { id: 'LB-11', rank: 11, name: 'Tanvi Agarwal', college: 'Information Science', unit: 'Unit 2', scorePercentage: 88, correctCount: 88, totalQuestions: 100, timeSpentSeconds: 1960, formattedTime: '32m 40s', date: '4 days ago' },
-    { id: 'LB-12', rank: 12, name: 'Yashvardhan Singh', college: 'Mathematics & Stats', unit: 'Unit 1', scorePercentage: 87, correctCount: 87, totalQuestions: 100, timeSpentSeconds: 1990, formattedTime: '33m 10s', date: '5 days ago' },
-    { id: 'LB-13', rank: 13, name: 'Meera Nambiar', college: 'Dept of AI', unit: 'Unit 2', scorePercentage: 86, correctCount: 86, totalQuestions: 100, timeSpentSeconds: 2045, formattedTime: '34m 05s', date: '5 days ago' },
-    { id: 'LB-14', rank: 14, name: 'Karan Chopra', college: 'Software Systems', unit: 'Unit 1', scorePercentage: 85, correctCount: 85, totalQuestions: 100, timeSpentSeconds: 2090, formattedTime: '34m 50s', date: '6 days ago' },
-    { id: 'LB-15', rank: 15, name: 'Ishaan Bhatia', college: 'Data Analytics Dept', unit: 'Unit 2', scorePercentage: 84, correctCount: 84, totalQuestions: 100, timeSpentSeconds: 2120, formattedTime: '35m 20s', date: '6 days ago' },
-    { id: 'LB-16', rank: 16, name: 'Pooja Sundaram', college: 'Computer Science', unit: 'Unit 1', scorePercentage: 83, correctCount: 83, totalQuestions: 100, timeSpentSeconds: 2160, formattedTime: '36m 00s', date: '1 week ago' },
-    { id: 'LB-17', rank: 17, name: 'Nihal Sen', college: 'Machine Learning Lab', unit: 'Unit 2', scorePercentage: 82, correctCount: 82, totalQuestions: 100, timeSpentSeconds: 2205, formattedTime: '36m 45s', date: '1 week ago' },
-    { id: 'LB-18', rank: 18, name: 'Diya Sen', college: 'Information Tech', unit: 'Unit 1', scorePercentage: 81, correctCount: 81, totalQuestions: 100, timeSpentSeconds: 2235, formattedTime: '37m 15s', date: '1 week ago' },
-    { id: 'LB-19', rank: 19, name: 'Arjun Reddy', college: 'Data Science Dept', unit: 'Unit 2', scorePercentage: 80, correctCount: 80, totalQuestions: 100, timeSpentSeconds: 2280, formattedTime: '38m 00s', date: '1 week ago' },
-    { id: 'LB-20', rank: 20, name: 'Shalini Verma', college: 'School of Computing', unit: 'Unit 1', scorePercentage: 79, correctCount: 79, totalQuestions: 100, timeSpentSeconds: 2320, formattedTime: '38m 40s', date: '1 week ago' }
-  ],
+  data: [],
   activeFilter: 'ALL',
   searchQuery: '',
   highlightId: null,
@@ -1989,17 +1986,14 @@ const LeaderboardManager = {
       const stored = localStorage.getItem('pa_top25_leaderboard');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.data = parsed;
+        if (Array.isArray(parsed)) {
+          this.data = parsed.filter(entry => !/^LB-(?:0[1-9]|1\d|20)$/.test(String(entry.id)));
+          if (this.data.length !== parsed.length) {
+            localStorage.setItem('pa_top25_leaderboard', JSON.stringify(this.data));
+          }
         }
       }
     } catch (e) {}
-
-    // Update active count & tests taken in navbar
-    const activeEl = document.getElementById('nav-active-count');
-    const testsEl = document.getElementById('nav-tests-taken-count');
-    if (activeEl) activeEl.textContent = '42';
-    if (testsEl) testsEl.textContent = '250+';
 
     this.syncFromServer();
   },
@@ -2009,7 +2003,7 @@ const LeaderboardManager = {
       const res = await fetch('/api/leaderboard');
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.leaderboard) && json.leaderboard.length > 0) {
+        if (json.success && Array.isArray(json.leaderboard)) {
           this.data = json.leaderboard;
           try {
             localStorage.setItem('pa_top25_leaderboard', JSON.stringify(this.data));
@@ -2175,14 +2169,18 @@ const LeaderboardManager = {
     // Update KPI boxes
     const topScoreEl = document.getElementById('lb-top-score');
     const fastestEl = document.getElementById('lb-fastest-time');
-    if (topScoreEl && this.data.length > 0) topScoreEl.textContent = `${this.data[0].scorePercentage}%`;
-    if (fastestEl && this.data.length > 0) {
-      const fastest = [...this.data].sort((a,b) => (a.timeSpentSeconds||9999) - (b.timeSpentSeconds||9999))[0];
-      if (fastest) fastestEl.textContent = fastest.formattedTime || '23m 40s';
+    const totalRecordsEl = document.getElementById('lb-total-records');
+    if (topScoreEl) topScoreEl.textContent = items.length > 0 ? `${items[0].scorePercentage}%` : '—';
+    if (totalRecordsEl) totalRecordsEl.textContent = String(items.length);
+    if (fastestEl && items.length > 0) {
+      const fastest = [...items].sort((a,b) => (a.timeSpentSeconds||9999) - (b.timeSpentSeconds||9999))[0];
+      if (fastest) fastestEl.textContent = fastest.formattedTime || this.formatTime(fastest.timeSpentSeconds);
+    } else if (fastestEl) {
+      fastestEl.textContent = '—';
     }
 
     if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No matching leaderboard records found.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">${this.data.length ? 'No matching results found.' : 'No results have been recorded yet. Complete an exam and choose to share your score.'}</td></tr>`;
       return;
     }
 

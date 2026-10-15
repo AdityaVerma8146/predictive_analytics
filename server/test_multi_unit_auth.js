@@ -1,4 +1,7 @@
 // Comprehensive test suite for Multi-Unit (Unit 1, Unit 2, Unit 3), Auth, and Analytics
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
 const { units, getUnit } = require('./data/units');
 
 console.log('==================================================');
@@ -44,6 +47,17 @@ u2.questions.forEach((q, idx) => {
 });
 if (u2Errors > 0) throw new Error(`Found ${u2Errors} errors in Unit 2 questions`);
 console.log('✅ PASS: All 100 questions in Unit 2 verified for valid IDs, options A-D, answers, and explanations.');
+
+// 6. Verify the generated browser bundle exposes the same real Unit 2 bank
+const clientWindow = {};
+const clientBundlePath = path.join(__dirname, '../public/js/questions-data.js');
+vm.runInNewContext(fs.readFileSync(clientBundlePath, 'utf8'), { window: clientWindow });
+const clientUnit2 = clientWindow.PREDICTIVE_ANALYTICS_DATA.getUnitData('unit2');
+if (JSON.stringify(clientUnit2.questions) !== JSON.stringify(u2.questions) ||
+    clientUnit2.revisionSheet.length !== u2.revisionSheet.length) {
+  throw new Error('The browser Unit 2 bundle does not match the source question bank.');
+}
+console.log('✅ PASS: All browser Unit 2 questions and revision topics match the source data.');
 
 console.log('==================================================');
 console.log('🎉 ALL MULTI-UNIT & AUTH DATA INTEGRITY TESTS PASSED!');

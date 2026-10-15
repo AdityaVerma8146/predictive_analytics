@@ -3531,3 +3531,161 @@ body::before {
   text-align: center;
 }
 
+/* ==========================================================================
+   Refined course dashboard and accurate results presentation
+   ========================================================================== */
+
+body::before {
+  opacity: 0.35;
+}
+
+.top-nav {
+  padding: 0.7rem clamp(1rem, 3vw, 2.25rem);
+}
+
+.hero-banner {
+  text-align: left;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  margin-bottom: 2rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), var(--bg-card) 68%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-title {
+  max-width: 850px;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  letter-spacing: -0.04em;
+}
+
+.hero-desc {
+  max-width: 760px;
+  margin: 0 0 1.5rem;
+  line-height: 1.7;
+}
+
+.hero-stats-row {
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+
+.hero-stat-card {
+  min-width: 120px;
+  align-items: flex-start;
+  padding: 0.7rem 1rem;
+  background: var(--bg-card);
+}
+
+.h-stat-num {
+  font-size: 1.35rem;
+}
+
+.h-stat-label {
+  letter-spacing: 0.04em;
+}
+
+.unit-selector-wrapper {
+  animation: none;
+}
+
+.unit-selector-bar {
+  border-bottom-color: var(--border-color);
+}
+
+.usb-author-tag {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-muted);
+}
+
+.usb-author-tag strong {
+  color: var(--text-main);
+}
+
+.unit-nav-card,
+.mode-card,
+.section-card {
+  backdrop-filter: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.unit-nav-card {
+  min-height: 210px;
+  border-width: 1px;
+}
+
+.unit-nav-card:hover,
+.mode-card:hover,
+.section-card:hover {
+  transform: translateY(-2px);
+}
+
+.unit-nav-card.active {
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.13), var(--bg-card) 72%);
+  box-shadow: inset 0 0 0 1px var(--border-active), var(--shadow-sm);
+}
+
+.unit-nav-card.active::before {
+  display: none;
+}
+
+.mode-card {
+  min-height: 245px;
+}
+
+.mode-card.primary-gradient {
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.13), var(--bg-card) 72%);
+  border-color: var(--border-active);
+}
+
+.btn-top25-leaderboard {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-main);
+  box-shadow: none;
+}
+
+.btn-top25-leaderboard i {
+  color: var(--primary-light);
+}
+
+.btn-top25-leaderboard:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-active);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.leaderboard-stats-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 700px) {
+  .hero-banner {
+    padding: 1.4rem;
+  }
+
+  .hero-stats-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hero-stat-card {
+    min-width: 0;
+  }
+
+  .leaderboard-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
